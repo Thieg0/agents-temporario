@@ -24,3 +24,6 @@ Não acessa roteadores, OLTs nem sistemas de monitoramento (Zabbix, Grafana etc.
 - Ferramenta de leitura do sistema de monitoramento que o NOC usa.
 - Aviso diário/de plantão por Telegram com as O.S. abertas por região ou assunto.
 - Modelo de comunicado e de post-mortem no padrão da empresa.
+
+## Abertura assistida de OS (versão 1)
+Arquivos: `preparar_os.py`, `skill-abrir-os-noc.md`, `prompts-os.md`. O script só lê o IXC (token do cofre, como o `os_alerta.py`), acha o contrato pela designação e monta a descrição da OS; o colaborador abre a OS na tela. Testes: `python -m pytest teste -q`.
