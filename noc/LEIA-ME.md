@@ -4,11 +4,11 @@ Textos prontos para colar nos campos do cadastro do agente na plataforma Mangaba
 
 | Campo | Arquivo | Limite | Tamanho |
 |---|---|---|---|
-| Descrição | `descricao.txt` | 300 | 273 |
-| Objetivo | `objetivo.txt` | 500 | 435 |
-| Personalidade | `personalidade.txt` | 3000 | 2990 |
+| Descrição | `descricao.txt` | 300 | 270 |
+| Objetivo | `objetivo.txt` | 500 | 420 |
+| Personalidade | `personalidade.txt` | 3000 | 2986 |
 
-Nome sugerido do agente: **Assistente NOC**.
+Nome sugerido do agente: **Assistente NOC**. Os três textos dizem que ele também é um assistente que olha e-mail, agenda e Drive de arquivos (só leitura, com a permissão da pessoa). Para isso funcionar, a pessoa precisa conectar a conta Google, como nos demais agentes.
 
 ## Como usar
 1. Criar o agente (um por pessoa do NOC que ainda não tem) e colar cada arquivo no campo certo.
