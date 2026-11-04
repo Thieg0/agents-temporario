@@ -10,6 +10,7 @@ agente nunca vê o token). Fluxo do NOC (Jennypher, 03/11/2026):
 Uso:
   preparar_os.py --designacao "SDR TAF 83108054" --chamado "OEMP-42074" --motivo "Inoperante"
   preparar_os.py --designacao "SDR TAF 83108054" --descobrir     (só nomes de campos; para calibrar)
+  preparar_os.py --comparar 75811 76196                          (campos que diferem entre duas OS; para calibrar a gravação)
 Opções: --json (saída em JSON)
 
 Para e manda para o humano (nunca chuta) quando: nenhuma OS com a designação; OS com contratos diferentes; contrato sem nome
@@ -228,9 +229,46 @@ def descobrir(ixc: Ixc, designacao: str) -> str:
     return "\n".join(linhas)
 
 
+SENSIVEL = ("fone", "mail", "cpf", "cnpj", "senha", "token", "celular", "whats")
+
+
+def ler_os(ixc: Ixc, os_id: str) -> dict:
+    regs, _ = ixc.listar("su_oss_chamado", "id", str(os_id).strip(), rp=1)
+    if not regs:
+        raise ErroIxc(f"não achei a OS {os_id} no IXC")
+    return regs[0]
+
+
+def comparar(ixc: Ixc, a: str, b: str) -> str:
+    """Só leitura: mostra os campos que diferem entre duas OS (valores curtos; campos de contato ficam de fora)."""
+    ra, rb = ler_os(ixc, a), ler_os(ixc, b)
+    chaves = sorted(set(ra) | set(rb))
+    iguais, difer, so_a, so_b = 0, [], [], []
+    for k in chaves:
+        if any(x in k.lower() for x in SENSIVEL):
+            continue
+        if k not in rb:
+            so_a.append(k)
+        elif k not in ra:
+            so_b.append(k)
+        elif str(ra[k]) == str(rb[k]):
+            iguais += 1
+        else:
+            difer.append(k)
+    cur = lambda v: (str(v)[:70] + "…") if len(str(v)) > 70 else str(v)  # noqa: E731
+    linhas = [f"OS {a} x OS {b}: {iguais} campos iguais, {len(difer)} diferentes.", "Diferentes (campo: valor em A | valor em B):"]
+    linhas += [f"  {k}: {cur(ra[k])!r} | {cur(rb[k])!r}" for k in difer]
+    if so_a:
+        linhas.append("Só na A: " + ", ".join(so_a))
+    if so_b:
+        linhas.append("Só na B: " + ", ".join(so_b))
+    return "\n".join(linhas)
+
+
 def principal(argv=None) -> int:
     ap = argparse.ArgumentParser(description="NOC: prepara a abertura de OS (somente leitura)")
-    ap.add_argument("--designacao", required=True)
+    ap.add_argument("--designacao", default="")
+    ap.add_argument("--comparar", nargs=2, metavar=("OS_A", "OS_B"))
     ap.add_argument("--chamado", default="")
     ap.add_argument("--motivo", default="")
     ap.add_argument("--descobrir", action="store_true")
@@ -239,6 +277,11 @@ def principal(argv=None) -> int:
     try:
         url, token, _ = acesso_ixc()
         ixc = Ixc(url, token)
+        if a.comparar:
+            print(comparar(ixc, *a.comparar))
+            return 0
+        if not a.designacao.strip():
+            raise ErroIxc("informe --designacao (ou --comparar OS_A OS_B)")
         if a.descobrir:
             print(descobrir(ixc, a.designacao))
             return 0

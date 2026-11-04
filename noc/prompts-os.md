@@ -26,3 +26,9 @@ Esperado (conferir): contrato 8054, cliente 150, Cliente Final "Video Policia -S
 
 ## Prompt 4: uso real
 O colaborador cola o chamado do cliente no chat e escreve: "Siga a skill abrir-os-noc".
+
+## Prompt 2b: comparar a OS modelo com a OS aberta certa (somente leitura; roda uma vez)
+Responda sempre em português do Brasil.
+
+Rode: python3 /opt/data/preparar_os.py --comparar 75811 76196 e mostre a saída exatamente como veio. Se der erro, mostre só a mensagem e pare. Não consulte o IXC por outro caminho, não use curl, não mostre token.
+(Cole a saída para o Thiego: ela mostra o que o IXC guardou numa OS aberta corretamente, e é a base para o script gravar a OS.)

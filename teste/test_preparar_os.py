@@ -37,7 +37,10 @@ class Fake:
                 if f.erro:
                     return self._r(200, {"type": "error", "message": f"falha {TOKEN}"})
                 if self.path.endswith("/su_oss_chamado"):
-                    return self._r(200, {"total": str(len(f.oss)), "registros": f.oss})
+                    regs = f.oss
+                    if c.get("qtype") == "su_oss_chamado.id":
+                        regs = [r for r in f.oss if r["id"] == c["query"]]
+                    return self._r(200, {"total": str(len(regs)), "registros": regs})
                 if self.path.endswith("/cliente_contrato"):
                     return self._r(200, {"total": "1", "registros": [f.contrato] if f.contrato else []})
                 self._r(404, {})
@@ -178,3 +181,24 @@ def test_so_os_aberta_usa_ela_com_aviso(monkeypatch, capsys):
     aberta["status"] = "A"
     cod, out, _ = rodar(monkeypatch, capsys, Fake([aberta]), ["--designacao", DES, "--chamado", "a", "--motivo", "b"])
     assert cod == 0 and "nenhuma OS finalizada" in out and "JÁ EXISTE OS ABERTA" in out
+
+
+def test_comparar_mostra_so_o_que_difere(monkeypatch, capsys):
+    a, b = os_(75811), os_(76196)
+    a["id_assunto"], b["id_assunto"] = "104", "55"
+    a["status"], b["status"] = "F", "A"
+    cod, out, _ = rodar(monkeypatch, capsys, Fake([a, b]), ["--comparar", "75811", "76196"])
+    assert cod == 0 and "id_assunto: '104' | '55'" in out and "status: 'F' | 'A'" in out
+    assert "id: '75811' | '76196'" in out and "id_cliente" not in out
+    for proibido in ("7199999999", "telefone_contato", TOKEN):
+        assert proibido not in out
+
+
+def test_comparar_os_inexistente(monkeypatch, capsys):
+    cod, _, err = rodar(monkeypatch, capsys, Fake([os_(1)]), ["--comparar", "1", "999"])
+    assert cod == 1 and "não achei a OS 999" in err
+
+
+def test_sem_designacao_nem_comparar(monkeypatch, capsys):
+    cod, _, err = rodar(monkeypatch, capsys, Fake([os_(1)]), [])
+    assert cod == 1 and "informe --designacao" in err
