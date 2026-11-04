@@ -6,7 +6,7 @@ Cada pasta tem tudo que aquele agente precisa: `os_alerta.py`, a skill e `prompt
 |---|---|
 | `socorro` | relatório diário das 8h com os 3 técnicos (visão de gerente) |
 | `noc` | **configuração de agente** do NOC (descrição, objetivo e personalidade; sem chaves) |
-| `milena` (140), `luiz-felipe` (121), `edson` (161), `carlos-henrique` (118), `raissa` (139), `paloma` (144) | aviso pessoal das 8h, só em dias úteis |
+| `milena` (140), `luiz-felipe` (121), `edson` (161), `carlos-henrique` (118), `raissa` (144), `paloma` (139) | aviso pessoal das 8h, só em dias úteis |
 
 ## Como funciona (mesmo padrão das migrações)
 - O **script consulta o IXC sozinho** (só leitura) e pega o token do mesmo jeito que o `migrar_avantia.py`: `IXC_TOKEN`/`IXC_URL`, ou `IXC_TOKEN_FILE`, ou `dados/.ixc_acesso.json` ao lado do script, ou o **cofre do agente** (`/opt/data/cofre-chaves.json`, entrada "IXC"). O agente nunca vê nem lê o token.

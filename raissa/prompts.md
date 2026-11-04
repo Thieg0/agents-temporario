@@ -14,14 +14,14 @@ Vou te passar dois anexos: os_alerta.py e uma skill. NÃO execute nada além do 
 ## Prompt 2: teste real (somente leitura)
 Responda sempre em português do Brasil.
 
-Primeiro rode: python3 /opt/data/os_alerta.py --testar-acesso e me mostre a saída (deve dizer de onde veio o acesso e "acesso OK"). Se der erro, mostre só a mensagem e pare. Depois siga a skill aviso-os-tecnico para o técnico 139, SEM o --so-dias-uteis neste teste: rode o script, mostre a saída COMPLETA, exatamente como veio, e acrescente no final uma linha começando com "💡" com a sua sugestão do que fazer primeiro, usando SÓ os fatos da saída. Não consulte o IXC por outro caminho, não use curl, não mostre token. Se der erro, mostre só a mensagem e pare. Não envie nada para ninguém neste teste.
+Primeiro rode: python3 /opt/data/os_alerta.py --testar-acesso e me mostre a saída (deve dizer de onde veio o acesso e "acesso OK"). Se der erro, mostre só a mensagem e pare. Depois siga a skill aviso-os-tecnico para o técnico 144, SEM o --so-dias-uteis neste teste: rode o script, mostre a saída COMPLETA, exatamente como veio, e acrescente no final uma linha começando com "💡" com a sua sugestão do que fazer primeiro, usando SÓ os fatos da saída. Não consulte o IXC por outro caminho, não use curl, não mostre token. Se der erro, mostre só a mensagem e pare. Não envie nada para ninguém neste teste.
 
-(Conferir com a tela do IXC. Sem número de referência: compare com a tela do IXC filtrando o técnico 139.)
+(Conferir com a tela do IXC. Sem número de referência: compare com a tela do IXC filtrando o técnico 144.)
 
 ## Prompt 3: agendar (só depois de conferir os números e de a pessoa querer receber)
 Responda sempre em português do Brasil.
 
-Crie um agendamento: seg a sex às 8h (America/Sao_Paulo), siga a skill aviso-os-tecnico para o técnico 139, com --so-dias-uteis. Envie o texto do script exatamente como veio mais a linha "💡" com a dica, e NÃO envie nada se o script não imprimir nada. Não mostre token nem respostas da API. Em caso de erro, me avise com a mensagem do erro. Antes de salvar, me mostre o resumo do agendamento.
+Crie um agendamento: seg a sex às 8h (America/Sao_Paulo), siga a skill aviso-os-tecnico para o técnico 144, com --so-dias-uteis. Envie o texto do script exatamente como veio mais a linha "💡" com a dica, e NÃO envie nada se o script não imprimir nada. Não mostre token nem respostas da API. Em caso de erro, me avise com a mensagem do erro. Antes de salvar, me mostre o resumo do agendamento.
 
 ## Depois
 - Revogar no IXC o token que estava embutido num script de exemplo da skill antiga alerta-prazo-os (e remover o script dela).

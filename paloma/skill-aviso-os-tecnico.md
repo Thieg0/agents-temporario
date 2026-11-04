@@ -3,7 +3,7 @@ name: aviso-os-tecnico
 description: Aviso pessoal de início do dia com as O.S. abertas do técnico e o que merece atenção primeiro. Use no agendamento diário das 8h.
 ---
 
-# Aviso diário de O.S. do técnico 144
+# Aviso diário de O.S. do técnico 139
 
 Arquivo de apoio: /opt/data/os_alerta.py (instalado uma vez; não altere). O script consulta o IXC, calcula os fatos e monta a mensagem. Você só roda e escreve a dica de uma frase.
 
@@ -15,7 +15,7 @@ Arquivo de apoio: /opt/data/os_alerta.py (instalado uma vez; não altere). O scr
 5. Parar no primeiro erro e mostrar a mensagem do script. Não repetir mais de uma vez e nunca inventar números.
 
 ## 2. Rodar o script (ele mesmo consulta o IXC)
-python3 /opt/data/os_alerta.py --modo pessoal --tecnico 144 --so-dias-uteis
+python3 /opt/data/os_alerta.py --modo pessoal --tecnico 139 --so-dias-uteis
 O script busca todas as páginas de O.S., confere sozinho que são do técnico certo e que a quantidade bate com o "total" do IXC, e monta a mensagem. Não busque nada pela api_integracao e não salve arquivos.
 - Se aparecer "Erro: sem acesso ao IXC ...": o token ainda não está disponível para o script. Avise a pessoa com o texto do erro e PARE (quem instala resolve).
 - Para testar só o acesso: python3 /opt/data/os_alerta.py --testar-acesso

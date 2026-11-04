@@ -58,7 +58,7 @@ BASE_URL_PADRAO = "https://gestorixc.webfoco.net/webservice/v1"
 COFRE_PADRAO = "/opt/data/cofre-chaves.json"
 MAX_PAGINAS = 60  # 1800 O.S. por técnico; se passar disso, o script recusa em vez de calcular com dados incompletos
 
-TECNICOS = {140: "Milena", 121: "Luiz Felipe", 161: "Edson", 118: "Carlos Henrique", 139: "Raissa", 144: "Paloma", 24: "Socorro", 176: "Bruna"}
+TECNICOS = {140: "Milena", 121: "Luiz Felipe", 161: "Edson", 118: "Carlos Henrique", 144: "Raissa", 139: "Paloma", 24: "Socorro", 176: "Bruna"}
 ASSUNTOS = {
     "5": "Ativação de cliente",
     "20": "Vistoria Interna",
