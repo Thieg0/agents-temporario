@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
-"""Alerta de prazo das O.S. do IXC (SOMENTE LEITURA). Arquivo único, só biblioteca padrão do Python.
+"""Alerta de prazo das O.S. do IXC. Arquivo único, só biblioteca padrão do Python. SEM TOKEN, SEM REDE, SOMENTE LEITURA.
+
+Quem fala com o IXC é o agente, pela ferramenta api_integracao (como nas migrações). O agente salva as respostas
+em arquivos e este script só LÊ os arquivos, classifica e formata a mensagem.
 
 Uso:
-  Visão de gerente (Dona Socorro): os_alerta.py --modo gerente --tecnicos 140,121,161
-  Aviso pessoal do técnico:        os_alerta.py --modo pessoal --tecnico 140 --so-dias-uteis
-  Dados em JSON (para o agente):   acrescente --json
+  Visão de gerente (Dona Socorro):
+    os_alerta.py --modo gerente --tecnicos 140,121,161 --entrada "140=/opt/data/os_140_p*.json" --entrada "121=/opt/data/os_121_p*.json" --entrada "161=/opt/data/os_161_p*.json"
+  Aviso pessoal do técnico:
+    os_alerta.py --modo pessoal --tecnico 140 --so-dias-uteis --entrada "/opt/data/os_140_p*.json"
+  Dados em JSON (para responder perguntas pontuais): acrescente --json
 
-Variáveis de ambiente:
-  IXC_TOKEN     token do IXC no formato id:hash (obrigatório; NUNCA passe por argumento nem imprima)
-  IXC_BASE_URL  padrão https://gestorixc.webfoco.net/webservice/v1
+Arquivos de entrada: a RESPOSTA CRUA da listagem, uma página por arquivo ({"page","total","registros":[...]}), com todas as
+páginas do técnico (tabela su_oss_chamado, filtro id_tecnico). --entrada aceita curinga (*) e vários caminhos separados
+por vírgula. O script confere que (1) as O.S. são do técnico pedido e (2) a quantidade bate com o "total" do IXC; se não
+bater, recusa e diz o que falta. Do arquivo ele usa só 5 campos (id, id_assunto, data_abertura, data_hora_assumido,
+status): nunca imprime dado de cliente.
 
 Regras (confirmadas com o Henrique em 03/11/2026):
   aberta  = status diferente de "F"
@@ -16,29 +23,23 @@ Regras (confirmadas com o Henrique em 03/11/2026):
   alerta  = aberta há mais de 48 h desde data_abertura, exceto pausadas (horário de Brasília)
   grupos  = 🔴 mais de 30 dias | 🟠 7 a 30 dias | 🟡 48 h a 7 dias
 
-Não imprime dado de cliente: só id da O.S., assunto, idade e se foi assumida.
 Se não houver nada a avisar, não imprime NADA e sai com código 0: o agente não deve enviar mensagem.
-Erros vão para o stderr com código 1 (a mensagem nunca contém o token).
+Erros vão para o stderr ("Erro: ...") com código 1.
 """
 
 from __future__ import annotations
 
 import argparse
-import base64
+import glob
 import json
-import os
 import sys
-import urllib.error
-import urllib.request
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-BASE_URL_PADRAO = "https://gestorixc.webfoco.net/webservice/v1"
 FUSO = ZoneInfo("America/Sao_Paulo")
 STATUS_FECHADAS = {"F"}
 ASSUNTO_PAUSADO = "278"
 ALERTA_H, ATENCAO_H, CRITICA_H = 48, 168, 720
-MAX_PAGINAS = 20
 LIMITE_TELEGRAM = 3800
 
 TECNICOS = {140: "Milena", 121: "Luiz Felipe", 161: "Edson", 118: "Carlos Henrique", 139: "Raissa", 144: "Paloma", 24: "Socorro", 176: "Bruna"}
@@ -60,32 +61,9 @@ GRUPOS = (
 )
 
 
+
 class ErroIxc(RuntimeError):
     pass
-
-
-class Ixc:
-    def __init__(self, token: str, base_url: str = BASE_URL_PADRAO, timeout: float = 30.0):
-        auth = base64.b64encode(token.encode()).decode()
-        self.base_url = base_url.rstrip("/")
-        self.headers = {"Authorization": f"Basic {auth}", "Content-Type": "application/json", "ixcsoft": "listar"}
-        self.timeout = timeout
-
-    def listar(self, tabela: str, campo: str, valor: str, page: int = 1, rp: int = 30, ordenar_id_desc: bool = False) -> list[dict]:
-        corpo = {"qtype": f"{tabela}.{campo}", "query": str(valor), "oper": "=", "page": str(page), "rp": str(rp)}
-        if ordenar_id_desc:
-            corpo.update({"sortname": f"{tabela}.id", "sortorder": "desc"})
-        req = urllib.request.Request(f"{self.base_url}/{tabela}", data=json.dumps(corpo).encode(), headers=self.headers, method="POST")
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as r:
-                dados = json.loads(r.read().decode())
-        except urllib.error.HTTPError as e:
-            raise ErroIxc(f"IXC respondeu {e.code}") from None
-        except (urllib.error.URLError, TimeoutError, ValueError):
-            raise ErroIxc("falha de rede ou resposta inválida do IXC") from None
-        if isinstance(dados, dict) and dados.get("type") == "error":
-            raise ErroIxc(str(dados.get("message", "erro do IXC"))[:200])
-        return (dados.get("registros") if isinstance(dados, dict) else None) or []
 
 
 def parse_dt(valor):
@@ -99,27 +77,56 @@ def parse_dt(valor):
     return None
 
 
-def os_abertas(ixc: Ixc, tecnico_id: int) -> list[dict]:
-    """Mais recentes primeiro; teto de 20 páginas (600 O.S.). Só os campos necessários."""
+CAMPOS = ("id", "id_assunto", "data_abertura", "data_hora_assumido", "status")
+
+
+def arquivos_de(padrao: str) -> list[str]:
+    """Expande curingas e vírgulas, em ordem estável. Erro claro se nada for encontrado."""
+    achados: list[str] = []
+    for p in (x.strip() for x in padrao.split(",") if x.strip()):
+        achados += sorted(glob.glob(p)) or []
+    achados = list(dict.fromkeys(achados))
+    if not achados:
+        raise ErroIxc(f"nenhum arquivo encontrado em {padrao!r}; salve a resposta de cada página da listagem em /opt/data")
+    return achados
+
+
+def registros_dos_arquivos(padrao: str, tecnico_id: int) -> list[dict]:
+    """Junta as páginas salvas pelo agente (resposta crua do IXC), sem repetir O.S. e conferindo integridade."""
     regs: list[dict] = []
-    for pagina in range(1, MAX_PAGINAS + 1):
-        lote = ixc.listar("su_oss_chamado", "id_tecnico", str(tecnico_id), page=pagina, ordenar_id_desc=True)
-        regs += lote
-        if len(lote) < 30:
-            break
-    campos = ("id", "id_assunto", "data_abertura", "data_hora_assumido", "status")
-    return [{c: r.get(c) for c in campos} for r in regs if r.get("status") not in STATUS_FECHADAS]
-
-
-def completar_assuntos(ixc: Ixc, ids) -> None:
-    for i in {str(x) for x in ids if x not in (None, "")} - set(ASSUNTOS):
+    totais: list[int] = []
+    for caminho in arquivos_de(padrao):
         try:
-            regs = ixc.listar("su_oss_assunto", "id", i, rp=1)
-        except ErroIxc:
-            continue
-        nome = str(regs[0].get("assunto", "")).strip() if regs else ""
-        if nome:
-            ASSUNTOS[i] = nome
+            with open(caminho, encoding="utf-8") as f:
+                dados = json.load(f)
+        except (OSError, ValueError):
+            raise ErroIxc(f"não consegui ler {caminho} (ausente ou não é JSON)") from None
+        itens = dados if isinstance(dados, list) else [dados]
+        for item in itens:
+            if not isinstance(item, dict):
+                raise ErroIxc(f"formato inesperado em {caminho}")
+            if "registros" in item:
+                regs += [r for r in (item.get("registros") or []) if isinstance(r, dict)]
+                try:
+                    totais.append(int(item["total"]))
+                except (KeyError, TypeError, ValueError):
+                    pass
+            else:
+                regs.append(item)
+    unicos = {}
+    for r in regs:
+        unicos.setdefault(str(r.get("id")), r)  # a mesma página salva duas vezes não conta em dobro
+    regs = list(unicos.values())
+    errados = {str(r.get("id_tecnico")) for r in regs if r.get("id_tecnico") not in (None, "") and str(r.get("id_tecnico")) != str(tecnico_id)}
+    if errados:
+        raise ErroIxc(f"os arquivos de {padrao!r} têm O.S. de outro técnico; busque de novo só o técnico {tecnico_id}")
+    if totais and len(regs) != max(totais):
+        raise ErroIxc(f"entrada incompleta para o técnico {tecnico_id}: {len(regs)} O.S. nos arquivos e o IXC informou {max(totais)}; busque as páginas que faltam e salve de novo")
+    return regs
+
+
+def abertas_de_registros(regs: list[dict]) -> list[dict]:
+    return [{c: r.get(c) for c in CAMPOS} for r in regs if r.get("status") not in STATUS_FECHADAS]
 
 
 def classificar(abertas: list[dict], agora: datetime) -> dict[str, list[dict]]:
@@ -155,9 +162,7 @@ def idade_txt(r: dict) -> str:
     return f"{r['dias']} dias" if parse_dt(r.get("data_abertura")) else "sem data de abertura"
 
 
-def resumo_tecnico(ixc: Ixc, tecnico_id: int, agora: datetime) -> dict:
-    abertas = os_abertas(ixc, tecnico_id)
-    completar_assuntos(ixc, [r.get("id_assunto") for r in abertas])
+def resumo_tecnico(tecnico_id: int, agora: datetime, abertas: list[dict]) -> dict:
     grupos = classificar(abertas, agora)
     return {
         "tecnico_id": tecnico_id,
@@ -169,7 +174,7 @@ def resumo_tecnico(ixc: Ixc, tecnico_id: int, agora: datetime) -> dict:
     }
 
 
-# --- Visão de gerente --------------------------------------------------------------------------
+# --- Visão de gerente ----------------------------------------------------------------------------
 
 
 def texto_gerente(resumos: list[dict]) -> str:
@@ -263,34 +268,48 @@ def dividir(texto: str) -> list[str]:
     return partes
 
 
-def principal(argv=None, agora: datetime | None = None, ixc: Ixc | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Alerta de prazo das O.S. (somente leitura)")
+def principal(argv=None, agora: datetime | None = None) -> int:
+    ap = argparse.ArgumentParser(description="Alerta de prazo das O.S. (lê arquivos salvos pelo agente; sem token e sem rede)")
     ap.add_argument("--modo", choices=("gerente", "pessoal"), required=True)
     ap.add_argument("--tecnicos", default="140,121,161", help="modo gerente: ids separados por vírgula")
     ap.add_argument("--tecnico", type=int, help="modo pessoal: id do técnico")
     ap.add_argument("--max-linhas", type=int, default=10)
     ap.add_argument("--so-dias-uteis", action="store_true", help="não imprime nada no sábado e no domingo")
+    ap.add_argument("--entrada", action="append", default=[], metavar="ID=CAMINHO",
+                    help='arquivos da listagem; "ID=/opt/data/os_ID_p*.json" (repita por técnico; no modo pessoal pode ser só o caminho)')
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
 
     agora = agora or datetime.now(FUSO).replace(tzinfo=None)
     if a.so_dias_uteis and agora.weekday() >= 5:
         return 0
-    if ixc is None:
-        token = os.environ.get("IXC_TOKEN", "").strip()
-        if ":" not in token:
-            print("Erro: variável IXC_TOKEN ausente ou fora do formato id:hash.", file=sys.stderr)
+    entradas: dict[int, str] = {}
+    for e in a.entrada:
+        if "=" in e:
+            k, _, v = e.partition("=")
+            try:
+                entradas[int(k)] = v
+            except ValueError:
+                print(f"Erro: --entrada inválido ({k!r} não é id de técnico).", file=sys.stderr)
+                return 1
+        elif a.modo == "pessoal" and a.tecnico:
+            entradas[a.tecnico] = e
+        else:
+            print("Erro: use --entrada ID=CAMINHO.", file=sys.stderr)
             return 1
-        ixc = Ixc(token, os.environ.get("IXC_BASE_URL", BASE_URL_PADRAO))
     try:
         if a.modo == "pessoal":
             if not a.tecnico:
                 print("Erro: informe --tecnico no modo pessoal.", file=sys.stderr)
                 return 1
-            resumos = [resumo_tecnico(ixc, a.tecnico, agora)]
+            ids = [a.tecnico]
         else:
             ids = list(dict.fromkeys(int(x) for x in a.tecnicos.split(",") if x.strip()))
-            resumos = [resumo_tecnico(ixc, t, agora) for t in ids]
+        faltando = [t for t in ids if t not in entradas]
+        if faltando:
+            print(f"Erro: falta --entrada para o técnico {faltando[0]}.", file=sys.stderr)
+            return 1
+        resumos = [resumo_tecnico(t, agora, abertas_de_registros(registros_dos_arquivos(entradas[t], t))) for t in ids]
     except (ErroIxc, ValueError) as e:
         print(f"Erro: {e}", file=sys.stderr)
         return 1

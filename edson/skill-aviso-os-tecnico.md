@@ -3,21 +3,35 @@ name: aviso-os-tecnico
 description: Aviso pessoal de início do dia com as O.S. abertas do técnico e o que merece atenção primeiro. Use no agendamento diário das 8h.
 ---
 
-# Aviso diário de O.S. do técnico
+# Aviso diário de O.S. do técnico 161
 
-SOMENTE LEITURA. O script calcula os fatos; você escreve só a dica de uma frase.
+Arquivo de apoio: /opt/data/os_alerta.py (instalado uma vez; não altere). O script calcula os fatos e monta a mensagem. Você busca os dados, roda, confere e escreve só a dica de uma frase.
 
-## Como executar (uma vez por dia útil, 8h)
-1. Rode, com o id do técnico DONO deste agente (140 Milena, 121 Luiz Felipe, 161 Edson):
+## 1. Segurança (valem sempre)
+1. SOMENTE LEITURA. NUNCA usar POST, PUT ou DELETE no IXC. Esta skill não altera nada.
+2. Usar SOMENTE a ferramenta api_integracao, conforme a descrição dela. NUNCA usar curl nem ler o cofre-chaves.json ou o token. Se o token aparecer na tela, avisar o supervisor.
+3. Não mostrar dados pessoais de clientes nem a resposta completa da API. Salvar em arquivo (/opt/data) e mostrar só o que o script imprimir.
+4. Nunca escrever listas, contagens ou datas "de memória" e nunca recalcular: quem calcula é o script, sobre os arquivos. Nunca corrigir ortografia, acentos ou nomes.
+5. Parar no primeiro erro e mostrar a mensagem do IXC ou do script. Não repetir mais de uma vez e nunca inventar números.
+6. Não remover arquivos. Os arquivos de cada dia levam a data no nome, então os de ontem não se misturam com os de hoje.
 
-   python3 /opt/data/os_alerta.py --modo pessoal --tecnico 140 --so-dias-uteis
+## 2. Buscar as O.S. de cada técnico (161)
+- LEITURA: usar a opção de listagem da ferramenta, com filtro: tabela su_oss_chamado, qtype su_oss_chamado.id_tecnico, oper "=", query <ID do técnico>, rp 30, page 1. Sem escolher campos (volta o registro completo: salvar em arquivo, nunca mostrar).
+- Depois page 2, 3, 4... até chegar uma página com MENOS de 30 registros. Não pare antes.
+- Salvar a RESPOSTA CRUA de cada página, sem editar nada, em /opt/data/os_<ID>_AAAA-MM-DD_p<N>.json, onde AAAA-MM-DD é a data de hoje (ex.: os_161_2026-11-04_p1.json, os_161_2026-11-04_p2.json). Uma página por arquivo. Não resumir, não filtrar, não conferir "de cabeça".
+- Se aparecer "Recurso não está disponível": esperar 5 minutos e tentar uma vez; se persistir, parar e avisar.
+- Se o IXC responder erro de permissão ou vazio para um técnico que deveria ter O.S., parar e avisar.
 
-   O token vem da variável IXC_TOKEN; nunca mostre nem peça o token.
-2. Se NÃO imprimir nada (fim de semana ou sem O.S. abertas): NÃO envie mensagem.
-3. Se imprimir: envie o texto EXATAMENTE como veio, e ACRESCENTE no final uma única linha começando com "💡", com a sua sugestão do que fazer primeiro. Use SÓ os fatos que estão no texto (a mais antiga, quantas passam de 30 dias, quantas ainda sem data de assumida, o assunto mais comum). Não invente motivo, cliente ou prazo, e não cite nada que não esteja no texto. Exemplo: "💡 Sugiro começar pela #12345, a mais antiga, e conferir se as 3 sem data de assumida já estão com você."
-4. Se o script terminar com erro ("Erro: ..."): avise a pessoa com o texto do erro e PARE.
+## 3. Rodar o script
+python3 /opt/data/os_alerta.py --modo pessoal --tecnico 161 --so-dias-uteis --entrada "/opt/data/os_161_AAAA-MM-DD_p*.json"
+(O curinga * pega todas as páginas salvas hoje. O script confere sozinho que as O.S. são do técnico certo e que a quantidade bate com o "total" do IXC; se disser "incompleta", busque as páginas que faltam, salve e rode de novo.)
 
-## Observações
+## 4. Depois de rodar
+- Se NÃO imprimir nada (fim de semana ou sem O.S. abertas): NÃO envie mensagem.
+- Se imprimir: envie o texto EXATAMENTE como veio e ACRESCENTE no final uma única linha começando com "💡", com a sua sugestão do que fazer primeiro. Use SÓ os fatos do texto (a mais antiga, quantas passam de 30 dias, quantas ainda sem data de assumida, o assunto mais comum). Não invente motivo, cliente ou prazo. Exemplo: "💡 Sugiro começar pela #12345, a mais antiga, e conferir se as 3 sem data de assumida já estão com você."
+- Se terminar com erro ("Erro: ..."): avise a pessoa com o texto do erro e PARE.
+
+## 5. Observações
 - Não existe prazo/agenda no IXC da Webfoco para essas O.S.; a ordem é por antiguidade. Não diga "para hoje".
-- A mensagem não tem dados de cliente. Não acrescente nome, endereço ou telefone.
 - Pausadas (assunto 278) aparecem à parte e não entram no alerta.
+- A mensagem não tem dados de cliente: não acrescente nome, endereço ou telefone.
