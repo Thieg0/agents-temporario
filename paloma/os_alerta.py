@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
-"""Alerta de prazo das O.S. do IXC. Arquivo único, só biblioteca padrão do Python. SEM TOKEN, SEM REDE, SOMENTE LEITURA.
+"""Alerta de prazo das O.S. do IXC. Arquivo único, só biblioteca padrão do Python. SOMENTE LEITURA.
 
-Quem fala com o IXC é o agente, pela ferramenta api_integracao (como nas migrações). O agente salva as respostas
-em arquivos e este script só LÊ os arquivos, classifica e formata a mensagem.
+O PRÓPRIO SCRIPT consulta o IXC (como o migrar_avantia.py das migrações). O agente só chama o script e envia o texto.
+O token NUNCA passa pelo agente: o script o lê sozinho e não o imprime em lugar nenhum. Ordem de busca do acesso:
+  1) variáveis IXC_URL + IXC_TOKEN       2) arquivo indicado em IXC_TOKEN_FILE (chmod 600)
+  3) dados/.ixc_acesso.json ao lado do script (chmod 600; criado pelo "acesso salvar" das migrações)
+  4) cofre do agente: /opt/data/cofre-chaves.json (ou o caminho de IXC_COFRE): entrada "IXC" ou a primeira com tipo "ixc"
+Se nenhuma existir, o script para com a mensagem "Erro: sem acesso ao IXC ...".
 
 Uso:
+  Testar o acesso (lê só 1 assunto; não imprime dados):
+    os_alerta.py --testar-acesso
   Visão de gerente (Dona Socorro):
-    os_alerta.py --modo gerente --tecnicos 140,121,161 --entrada "140=/opt/data/os_140_p*.json" --entrada "121=/opt/data/os_121_p*.json" --entrada "161=/opt/data/os_161_p*.json"
+    os_alerta.py --modo gerente --tecnicos 140,121,161
   Aviso pessoal do técnico:
-    os_alerta.py --modo pessoal --tecnico 140 --so-dias-uteis --entrada "/opt/data/os_140_p*.json"
+    os_alerta.py --modo pessoal --tecnico 140 --so-dias-uteis
   Dados em JSON (para responder perguntas pontuais): acrescente --json
 
-Arquivos de entrada: a RESPOSTA CRUA da listagem, uma página por arquivo ({"page","total","registros":[...]}), com todas as
-páginas do técnico (tabela su_oss_chamado, filtro id_tecnico). --entrada aceita curinga (*) e vários caminhos separados
-por vírgula. O script confere que (1) as O.S. são do técnico pedido e (2) a quantidade bate com o "total" do IXC; se não
-bater, recusa e diz o que falta. Do arquivo ele usa só 5 campos (id, id_assunto, data_abertura, data_hora_assumido,
-status): nunca imprime dado de cliente.
+Reserva (sem acesso do script): --entrada "ID=/opt/data/os_ID_p*.json" lê respostas cruas já salvas (uma página por
+arquivo, {"page","total","registros":[...]}); aceita curinga e vários caminhos separados por vírgula.
+
+O script confere que (1) as O.S. são do técnico pedido e (2) a quantidade bate com o "total" do IXC; se não bater, recusa
+e diz o que falta. Do IXC ele usa só 5 campos (id, id_assunto, data_abertura, data_hora_assumido, status): nunca imprime
+dado de cliente.
 
 Regras (confirmadas com o Henrique em 03/11/2026):
   aberta  = status diferente de "F"
@@ -30,9 +37,15 @@ Erros vão para o stderr ("Erro: ...") com código 1.
 from __future__ import annotations
 
 import argparse
+import base64
 import glob
 import json
+import os
+import re
+import stat
 import sys
+import urllib.error
+import urllib.request
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -41,6 +54,9 @@ STATUS_FECHADAS = {"F"}
 ASSUNTO_PAUSADO = "278"
 ALERTA_H, ATENCAO_H, CRITICA_H = 48, 168, 720
 LIMITE_TELEGRAM = 3800
+BASE_URL_PADRAO = "https://gestorixc.webfoco.net/webservice/v1"
+COFRE_PADRAO = "/opt/data/cofre-chaves.json"
+MAX_PAGINAS = 60  # 1800 O.S. por técnico; se passar disso, o script recusa em vez de calcular com dados incompletos
 
 TECNICOS = {140: "Milena", 121: "Luiz Felipe", 161: "Edson", 118: "Carlos Henrique", 139: "Raissa", 144: "Paloma", 24: "Socorro", 176: "Bruna"}
 ASSUNTOS = {
@@ -75,6 +91,116 @@ def parse_dt(valor):
         except ValueError:
             pass
     return None
+
+
+_TOKEN_CONHECIDO: list[str] = []  # só para limpar o token de mensagens de erro; nunca é impresso
+
+
+def _limpar(texto: str) -> str:
+    for t in _TOKEN_CONHECIDO:
+        texto = texto.replace(t, "[token]").replace(base64.b64encode(t.encode()).decode(), "[token]")
+    return texto
+
+
+def _ler_json_privado(caminho: str):
+    try:
+        modo = os.stat(caminho).st_mode
+    except OSError:
+        return None
+    if modo & (stat.S_IRWXG | stat.S_IRWXO):
+        raise ErroIxc(f"o arquivo {caminho} está com permissão aberta; rode chmod 600 nele")
+    try:
+        with open(caminho, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        raise ErroIxc(f"não consegui ler {caminho}") from None
+
+
+def acesso_ixc(env=None) -> tuple[str, str, str]:
+    """Devolve (url, token, origem). Nunca imprime o token."""
+    env = os.environ if env is None else env
+    if env.get("IXC_TOKEN"):
+        return (env.get("IXC_URL") or BASE_URL_PADRAO), env["IXC_TOKEN"].strip(), "ambiente"
+    if env.get("IXC_TOKEN_FILE"):
+        dados = _ler_json_privado(env["IXC_TOKEN_FILE"])
+        if isinstance(dados, dict) and dados.get("token"):
+            return (env.get("IXC_URL") or dados.get("url") or BASE_URL_PADRAO), str(dados["token"]).strip(), "arquivo (IXC_TOKEN_FILE)"
+    aqui = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dados", ".ixc_acesso.json")
+    dados = _ler_json_privado(aqui)
+    if isinstance(dados, dict) and dados.get("token"):
+        return (env.get("IXC_URL") or dados.get("url") or BASE_URL_PADRAO), str(dados["token"]).strip(), "acesso salvo"
+    cofre = env.get("IXC_COFRE") or COFRE_PADRAO
+    try:
+        with open(cofre, encoding="utf-8") as f:
+            itens = json.load(f)
+    except (OSError, ValueError):
+        itens = None
+    if isinstance(itens, dict):
+        entrada = next((v for k, v in itens.items() if str(k).lower() == "ixc" and isinstance(v, dict)), None)
+        if entrada is None:
+            entrada = next((v for v in itens.values() if isinstance(v, dict) and str(v.get("tipo", "")).lower() == "ixc"), None)
+        if entrada and entrada.get("valor"):
+            return (env.get("IXC_URL") or entrada.get("base_url") or BASE_URL_PADRAO), str(entrada["valor"]).strip(), "cofre do agente"
+    raise ErroIxc("sem acesso ao IXC: não achei IXC_TOKEN, IXC_TOKEN_FILE, dados/.ixc_acesso.json nem a entrada do IXC no cofre do agente")
+
+
+class Ixc:
+    """Cliente só de leitura (POST com ixcsoft: listar). Não existe método de escrita nem de exclusão."""
+
+    def __init__(self, url: str, token: str, timeout: float = 30.0):
+        _TOKEN_CONHECIDO.append(token)
+        self.url = url.rstrip("/")
+        auth = base64.b64encode(token.encode()).decode()
+        self.cab = {"Authorization": f"Basic {auth}", "Content-Type": "application/json", "ixcsoft": "listar"}
+        self.timeout = timeout
+
+    def listar(self, tabela: str, campo: str, valor: str, page: int = 1, rp: int = 30, id_desc: bool = False) -> tuple[list[dict], int | None]:
+        corpo = {"qtype": f"{tabela}.{campo}", "query": str(valor), "oper": "=", "page": str(page), "rp": str(rp)}
+        if id_desc:
+            corpo.update({"sortname": f"{tabela}.id", "sortorder": "desc"})
+        req = urllib.request.Request(f"{self.url}/{tabela}", data=json.dumps(corpo).encode(), headers=self.cab, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as r:
+                dados = json.loads(r.read().decode())
+        except urllib.error.HTTPError as e:
+            raise ErroIxc(f"IXC respondeu {e.code}") from None
+        except (urllib.error.URLError, TimeoutError, ValueError, OSError):
+            raise ErroIxc("falha de rede ou resposta inválida do IXC") from None
+        if isinstance(dados, dict) and dados.get("type") == "error":
+            raise ErroIxc(_limpar(str(dados.get("message", "erro do IXC")))[:200])
+        if not isinstance(dados, dict):
+            raise ErroIxc("resposta inesperada do IXC")
+        try:
+            total = int(dados["total"])
+        except (KeyError, TypeError, ValueError):
+            total = None
+        return [r for r in (dados.get("registros") or []) if isinstance(r, dict)], total
+
+
+def registros_do_ixc(ixc: Ixc, tecnico_id: int) -> list[dict]:
+    """Todas as páginas do técnico (mais recentes primeiro), com as mesmas conferências do modo arquivo."""
+    regs: list[dict] = []
+    totais: list[int] = []
+    for pagina in range(1, MAX_PAGINAS + 1):
+        lote, total = ixc.listar("su_oss_chamado", "id_tecnico", str(tecnico_id), page=pagina, id_desc=True)
+        regs += lote
+        if total is not None:
+            totais.append(total)
+        if len(lote) < 30 or (totais and len(regs) >= max(totais)):
+            break
+    return validar_registros(regs, totais, tecnico_id, f"IXC (técnico {tecnico_id})")
+
+
+def completar_assuntos(ixc: Ixc, abertas: list[dict]) -> None:
+    """Busca no IXC o nome dos assuntos ainda desconhecidos. Se falhar, o texto mostra 'assunto N'."""
+    for i in {str(r.get("id_assunto")) for r in abertas if r.get("id_assunto") not in (None, "")} - set(ASSUNTOS):
+        try:
+            regs, _ = ixc.listar("su_oss_assunto", "id", i, rp=1)
+        except ErroIxc:
+            continue
+        nome = str(regs[0].get("assunto", "")).strip() if regs else ""
+        if nome:
+            ASSUNTOS[i] = nome
 
 
 CAMPOS = ("id", "id_assunto", "data_abertura", "data_hora_assumido", "status")
@@ -113,15 +239,19 @@ def registros_dos_arquivos(padrao: str, tecnico_id: int) -> list[dict]:
                     pass
             else:
                 regs.append(item)
+    return validar_registros(regs, totais, tecnico_id, f"os arquivos de {padrao!r}")
+
+
+def validar_registros(regs: list[dict], totais: list[int], tecnico_id: int, origem: str) -> list[dict]:
     unicos = {}
     for r in regs:
-        unicos.setdefault(str(r.get("id")), r)  # a mesma página salva duas vezes não conta em dobro
+        unicos.setdefault(str(r.get("id")), r)  # a mesma página lida duas vezes não conta em dobro
     regs = list(unicos.values())
     errados = {str(r.get("id_tecnico")) for r in regs if r.get("id_tecnico") not in (None, "") and str(r.get("id_tecnico")) != str(tecnico_id)}
     if errados:
-        raise ErroIxc(f"os arquivos de {padrao!r} têm O.S. de outro técnico; busque de novo só o técnico {tecnico_id}")
+        raise ErroIxc(f"{origem} têm O.S. de outro técnico; refaça só o técnico {tecnico_id}")
     if totais and len(regs) != max(totais):
-        raise ErroIxc(f"entrada incompleta para o técnico {tecnico_id}: {len(regs)} O.S. nos arquivos e o IXC informou {max(totais)}; busque as páginas que faltam e salve de novo")
+        raise ErroIxc(f"entrada incompleta para o técnico {tecnico_id}: {len(regs)} O.S. lidas e o IXC informou {max(totais)}; rode de novo")
     return regs
 
 
@@ -269,17 +399,30 @@ def dividir(texto: str) -> list[str]:
 
 
 def principal(argv=None, agora: datetime | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Alerta de prazo das O.S. (lê arquivos salvos pelo agente; sem token e sem rede)")
-    ap.add_argument("--modo", choices=("gerente", "pessoal"), required=True)
+    ap = argparse.ArgumentParser(description="Alerta de prazo das O.S. (consulta o IXC sozinho, somente leitura)")
+    ap.add_argument("--modo", choices=("gerente", "pessoal"))
+    ap.add_argument("--testar-acesso", action="store_true", help="só confere o acesso ao IXC e diz de onde veio; não imprime dados")
     ap.add_argument("--tecnicos", default="140,121,161", help="modo gerente: ids separados por vírgula")
     ap.add_argument("--tecnico", type=int, help="modo pessoal: id do técnico")
     ap.add_argument("--max-linhas", type=int, default=10)
     ap.add_argument("--so-dias-uteis", action="store_true", help="não imprime nada no sábado e no domingo")
     ap.add_argument("--entrada", action="append", default=[], metavar="ID=CAMINHO",
-                    help='arquivos da listagem; "ID=/opt/data/os_ID_p*.json" (repita por técnico; no modo pessoal pode ser só o caminho)')
+                    help='RESERVA: arquivos já salvos; "ID=/opt/data/os_ID_p*.json" (repita por técnico). Sem isso o script consulta o IXC')
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
 
+    if a.testar_acesso:
+        try:
+            url, token, origem = acesso_ixc()
+            Ixc(url, token).listar("su_oss_assunto", "id", ASSUNTO_PAUSADO, rp=1)
+        except ErroIxc as e:
+            print(f"Erro: {_limpar(str(e))}", file=sys.stderr)
+            return 1
+        print(f"acesso vindo de: {origem}\nacesso OK (leitura)")
+        return 0
+    if not a.modo:
+        print("Erro: informe --modo gerente|pessoal (ou --testar-acesso).", file=sys.stderr)
+        return 1
     agora = agora or datetime.now(FUSO).replace(tzinfo=None)
     if a.so_dias_uteis and agora.weekday() >= 5:
         return 0
@@ -305,13 +448,16 @@ def principal(argv=None, agora: datetime | None = None) -> int:
             ids = [a.tecnico]
         else:
             ids = list(dict.fromkeys(int(x) for x in a.tecnicos.split(",") if x.strip()))
-        faltando = [t for t in ids if t not in entradas]
-        if faltando:
-            print(f"Erro: falta --entrada para o técnico {faltando[0]}.", file=sys.stderr)
-            return 1
-        resumos = [resumo_tecnico(t, agora, abertas_de_registros(registros_dos_arquivos(entradas[t], t))) for t in ids]
+        ixc = None
+        if any(t not in entradas for t in ids):
+            url, token, _ = acesso_ixc()
+            ixc = Ixc(url, token)
+        listas = {t: abertas_de_registros(registros_dos_arquivos(entradas[t], t) if t in entradas else registros_do_ixc(ixc, t)) for t in ids}
+        if ixc:
+            completar_assuntos(ixc, [r for l in listas.values() for r in l])
+        resumos = [resumo_tecnico(t, agora, listas[t]) for t in ids]
     except (ErroIxc, ValueError) as e:
-        print(f"Erro: {e}", file=sys.stderr)
+        print(f"Erro: {_limpar(str(e))}", file=sys.stderr)
         return 1
 
     if a.json:

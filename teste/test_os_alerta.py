@@ -1,5 +1,8 @@
 import json
+import os
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -142,7 +145,7 @@ def test_total_do_ixc_e_conferido(capsys):
     regs = [os_(i, 100) for i in range(1, 4)]
     padrao = salvar_paginas(140, regs, total=5)  # IXC disse 5, só 3 foram salvas
     assert m.principal(["--modo", "pessoal", "--tecnico", "140", "--entrada", padrao], agora=AGORA) == 1
-    assert "incompleta para o técnico 140: 3 O.S. nos arquivos e o IXC informou 5" in capsys.readouterr().err
+    assert "incompleta para o técnico 140: 3 O.S. lidas e o IXC informou 5" in capsys.readouterr().err
 
 
 def test_arquivo_de_outro_tecnico_e_recusado(capsys):
@@ -160,14 +163,6 @@ def test_arquivo_ruim_ou_ausente(tmp_path, capsys):
     assert "nenhum arquivo encontrado" in capsys.readouterr().err
 
 
-def test_sem_entrada_e_gerente_exige_todos(capsys):
-    assert m.principal(["--modo", "pessoal", "--tecnico", "140"], agora=AGORA) == 1
-    assert "falta --entrada para o técnico 140" in capsys.readouterr().err
-    padrao = salvar_paginas(140, [os_(1, 100)])
-    assert m.principal(["--modo", "gerente", "--tecnicos", "140,121", "--entrada", f"140={padrao}"], agora=AGORA) == 1
-    assert "falta --entrada para o técnico 121" in capsys.readouterr().err
-
-
 def test_resposta_real_do_ixc_com_70_campos(capsys):
     """A resposta crua traz dezenas de campos (cliente, endereço...): só 5 são usados e nada vaza."""
     r = os_(1, 24 * 40)
@@ -179,7 +174,180 @@ def test_resposta_real_do_ixc_com_70_campos(capsys):
         assert proibido not in t
 
 
-def test_script_nao_tem_rede_nem_token():
-    fonte = (Path(__file__).parent.parent / "socorro" / "os_alerta.py").read_text(encoding="utf-8")
-    for proibido in ("urllib", "http.client", "requests", "socket", "IXC_TOKEN", "environ", "Authorization", "subprocess"):
-        assert proibido not in fonte
+# --- O script consulta o IXC sozinho (servidor simulado) ------------------------------------------
+
+TOKEN = "9:SEGREDOXYZ"
+
+
+class FakeIxc:
+    """IXC simulado: guarda o que recebeu, pagina de 30, devolve total e valida o Basic auth."""
+
+    def __init__(self, os_por_tecnico, assuntos=None, erro=None):
+        self.os = os_por_tecnico
+        self.assuntos = assuntos or {}
+        self.erro = erro
+        self.pedidos = []
+        fake = self
+
+        class H(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_POST(self):
+                corpo = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                fake.pedidos.append((self.path, dict(self.headers), corpo))
+                import base64
+                if self.headers.get("Authorization") != "Basic " + base64.b64encode(TOKEN.encode()).decode():
+                    return self._r(401, {"message": "nao autorizado"})
+                if fake.erro:
+                    return self._r(200, {"type": "error", "message": f"falha com {TOKEN}"})
+                if self.path.endswith("/su_oss_chamado"):
+                    regs = fake.os.get(int(corpo["query"]), [])
+                    pg, rp = int(corpo["page"]), int(corpo["rp"])
+                    return self._r(200, {"page": str(pg), "total": str(len(regs)), "registros": regs[(pg - 1) * rp: pg * rp]})
+                if self.path.endswith("/su_oss_assunto"):
+                    nome = fake.assuntos.get(corpo["query"])
+                    return self._r(200, {"total": "1" if nome else "0", "registros": [{"id": corpo["query"], "assunto": nome}] if nome else []})
+                self._r(404, {})
+
+            def _r(self, cod, obj):
+                b = json.dumps(obj).encode()
+                self.send_response(cod)
+                self.send_header("Content-Length", str(len(b)))
+                self.end_headers()
+                self.wfile.write(b)
+
+        self.srv = HTTPServer(("127.0.0.1", 0), H)
+        self.url = f"http://127.0.0.1:{self.srv.server_port}/webservice/v1"
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+
+    def fechar(self):
+        self.srv.shutdown()
+
+
+def com_acesso(monkeypatch, fake, tmp_path=None):
+    for k in ("IXC_URL", "IXC_TOKEN", "IXC_TOKEN_FILE", "IXC_COFRE"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("IXC_URL", fake.url)
+    monkeypatch.setenv("IXC_TOKEN", TOKEN)
+
+
+def test_script_consulta_o_ixc_sozinho_varias_paginas(monkeypatch, capsys):
+    regs = [os_(i, 100 + i) for i in range(1, 71)]  # 70 O.S.: 3 páginas
+    fake = FakeIxc({140: regs, 121: [os_(900, 100, tecnico=121)]}, assuntos={"20": "Vistoria Interna"})
+    com_acesso(monkeypatch, fake)
+    try:
+        assert m.principal(["--modo", "gerente", "--tecnicos", "140,121"], agora=AGORA) == 0
+    finally:
+        fake.fechar()
+    t = capsys.readouterr().out
+    assert "Milena" in t and "70" in t and "SEGREDO" not in t and TOKEN not in t
+    paginas = [c["page"] for p, h, c in fake.pedidos if p.endswith("su_oss_chamado") and c["query"] == "140"]
+    assert paginas == ["1", "2", "3"]
+    assert all({k.lower(): v for k, v in h.items()}.get("ixcsoft") == "listar" for _, h, _ in fake.pedidos)
+
+
+def test_ixc_so_le_nunca_escreve_nem_apaga():
+    fonte = Path(m.__file__).read_text(encoding="utf-8")
+    assert "DELETE" not in fonte and "PUT" not in fonte and "inserir" not in fonte
+
+
+def test_token_nunca_aparece_na_saida_nem_no_erro(monkeypatch, capsys):
+    fake = FakeIxc({140: [os_(1, 100)]}, erro=True)
+    com_acesso(monkeypatch, fake)
+    try:
+        assert m.principal(["--modo", "pessoal", "--tecnico", "140"], agora=AGORA) == 1
+    finally:
+        fake.fechar()
+    cap = capsys.readouterr()
+    assert TOKEN not in cap.out + cap.err and "SEGREDOXYZ" not in cap.out + cap.err and "[token]" in cap.err
+
+
+def test_token_errado_da_erro_claro(monkeypatch, capsys):
+    fake = FakeIxc({140: [os_(1, 100)]})
+    com_acesso(monkeypatch, fake)
+    monkeypatch.setenv("IXC_TOKEN", "1:outro")
+    try:
+        assert m.principal(["--modo", "pessoal", "--tecnico", "140"], agora=AGORA) == 1
+    finally:
+        fake.fechar()
+    assert "IXC respondeu 401" in capsys.readouterr().err
+
+
+def test_sem_acesso_diz_o_que_falta(monkeypatch, capsys, tmp_path):
+    for k in ("IXC_URL", "IXC_TOKEN", "IXC_TOKEN_FILE"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("IXC_COFRE", str(tmp_path / "nao-existe.json"))
+    monkeypatch.setattr(m.os.path, "abspath", lambda p: str(tmp_path / "x.py"))
+    assert m.principal(["--modo", "pessoal", "--tecnico", "140"], agora=AGORA) == 1
+    assert "sem acesso ao IXC" in capsys.readouterr().err
+
+
+def test_acesso_pelo_cofre_do_agente(monkeypatch, tmp_path):
+    for k in ("IXC_URL", "IXC_TOKEN", "IXC_TOKEN_FILE"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setattr(m.os.path, "abspath", lambda p: str(tmp_path / "x.py"))
+    cofre = tmp_path / "cofre-chaves.json"
+    cofre.write_text(json.dumps({"OUTRA": {"valor": "x", "tipo": "bearer"},
+                                 "ixc-webfoco": {"valor": TOKEN, "tipo": "ixc", "base_url": "https://host/webservice/v1", "guardada_em": "2026"}}))
+    monkeypatch.setenv("IXC_COFRE", str(cofre))
+    assert m.acesso_ixc() == ("https://host/webservice/v1", TOKEN, "cofre do agente")
+    cofre.write_text(json.dumps({"IXC": {"valor": "1:nome", "tipo": "ixc"}, "ixc-webfoco": {"valor": TOKEN, "tipo": "ixc"}}))
+    assert m.acesso_ixc()[1] == "1:nome"  # a entrada chamada "IXC" vence
+
+
+def test_acesso_por_arquivo_exige_chmod_600(monkeypatch, tmp_path):
+    monkeypatch.delenv("IXC_TOKEN", raising=False)
+    f = tmp_path / "acesso.json"
+    f.write_text(json.dumps({"url": "https://h/v1", "token": TOKEN}))
+    monkeypatch.setenv("IXC_TOKEN_FILE", str(f))
+    os.chmod(f, 0o644)
+    try:
+        m.acesso_ixc()
+        assert False
+    except m.ErroIxc as e:
+        assert "chmod 600" in str(e) and TOKEN not in str(e)
+    os.chmod(f, 0o600)
+    assert m.acesso_ixc() == ("https://h/v1", TOKEN, "arquivo (IXC_TOKEN_FILE)")
+
+
+def test_testar_acesso(monkeypatch, capsys):
+    fake = FakeIxc({}, assuntos={"278": "Pausado/Congelado"})
+    com_acesso(monkeypatch, fake)
+    try:
+        assert m.principal(["--testar-acesso"]) == 0
+    finally:
+        fake.fechar()
+    out = capsys.readouterr().out
+    assert "acesso vindo de: ambiente" in out and "acesso OK" in out and TOKEN not in out
+
+
+def test_assunto_novo_e_buscado_no_ixc(monkeypatch, capsys):
+    fake = FakeIxc({140: [os_(1, 24 * 40, assunto="999")]}, assuntos={"999": "Assunto Novo X"})
+    com_acesso(monkeypatch, fake)
+    try:
+        assert m.principal(["--modo", "pessoal", "--tecnico", "140"], agora=AGORA) == 0
+    finally:
+        fake.fechar()
+        m.ASSUNTOS.pop("999", None)
+    assert "Assunto Novo X" in capsys.readouterr().out
+
+
+def test_ixc_devolve_os_de_outro_tecnico_e_recusado(monkeypatch, capsys):
+    fake = FakeIxc({140: [os_(1, 100, tecnico=161)]})
+    com_acesso(monkeypatch, fake)
+    try:
+        assert m.principal(["--modo", "pessoal", "--tecnico", "140"], agora=AGORA) == 1
+    finally:
+        fake.fechar()
+    assert "outro técnico" in capsys.readouterr().err
+
+
+def test_sem_os_abertas_nao_imprime_nada(monkeypatch, capsys):
+    fake = FakeIxc({140: [os_(1, 100, status="F")]})
+    com_acesso(monkeypatch, fake)
+    try:
+        assert m.principal(["--modo", "pessoal", "--tecnico", "140"], agora=AGORA) == 0
+    finally:
+        fake.fechar()
+    assert capsys.readouterr().out == ""
