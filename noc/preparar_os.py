@@ -239,11 +239,11 @@ def ler_os(ixc: Ixc, os_id: str) -> dict:
     return regs[0]
 
 
-def comparar(ixc: Ixc, a: str, b: str) -> str:
+def comparar(ixc: Ixc, a: str, b: str, iguais_valores: bool = False) -> str:
     """Só leitura: mostra os campos que diferem entre duas OS (valores curtos; campos de contato ficam de fora)."""
     ra, rb = ler_os(ixc, a), ler_os(ixc, b)
     chaves = sorted(set(ra) | set(rb))
-    iguais, difer, so_a, so_b = 0, [], [], []
+    iguais, difer, so_a, so_b, ig_val = 0, [], [], [], []
     for k in chaves:
         if any(x in k.lower() for x in SENSIVEL):
             continue
@@ -253,11 +253,15 @@ def comparar(ixc: Ixc, a: str, b: str) -> str:
             so_b.append(k)
         elif str(ra[k]) == str(rb[k]):
             iguais += 1
+            if str(ra[k]).strip() and len(str(ra[k])) <= 24:
+                ig_val.append(f"{k}={ra[k]!r}")
         else:
             difer.append(k)
     cur = lambda v: (str(v)[:70] + "…") if len(str(v)) > 70 else str(v)  # noqa: E731
     linhas = [f"OS {a} x OS {b}: {iguais} campos iguais, {len(difer)} diferentes.", "Diferentes (campo: valor em A | valor em B):"]
     linhas += [f"  {k}: {cur(ra[k])!r} | {cur(rb[k])!r}" for k in difer]
+    if iguais_valores:
+        linhas += ["Iguais (campo=valor, só os curtos e preenchidos):", "  " + ", ".join(ig_val)]
     if so_a:
         linhas.append("Só na A: " + ", ".join(so_a))
     if so_b:
@@ -269,6 +273,7 @@ def principal(argv=None) -> int:
     ap = argparse.ArgumentParser(description="NOC: prepara a abertura de OS (somente leitura)")
     ap.add_argument("--designacao", default="")
     ap.add_argument("--comparar", nargs=2, metavar=("OS_A", "OS_B"))
+    ap.add_argument("--mostrar-iguais", action="store_true", help="com --comparar: mostra também os valores curtos dos campos iguais")
     ap.add_argument("--chamado", default="")
     ap.add_argument("--motivo", default="")
     ap.add_argument("--descobrir", action="store_true")
@@ -278,7 +283,7 @@ def principal(argv=None) -> int:
         url, token, _ = acesso_ixc()
         ixc = Ixc(url, token)
         if a.comparar:
-            print(comparar(ixc, *a.comparar))
+            print(comparar(ixc, *a.comparar, iguais_valores=a.mostrar_iguais))
             return 0
         if not a.designacao.strip():
             raise ErroIxc("informe --designacao (ou --comparar OS_A OS_B)")

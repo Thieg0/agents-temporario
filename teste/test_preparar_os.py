@@ -202,3 +202,12 @@ def test_comparar_os_inexistente(monkeypatch, capsys):
 def test_sem_designacao_nem_comparar(monkeypatch, capsys):
     cod, _, err = rodar(monkeypatch, capsys, Fake([os_(1)]), [])
     assert cod == 1 and "informe --designacao" in err
+
+
+def test_comparar_mostrar_iguais(monkeypatch, capsys):
+    a, b = os_(75811), os_(76196)
+    a["prioridade"] = b["prioridade"] = "N"
+    a["endereco"], b["endereco"] = "Rua Secreta A", "Rua Secreta B"
+    cod, out, _ = rodar(monkeypatch, capsys, Fake([a, b]), ["--comparar", "75811", "76196", "--mostrar-iguais"])
+    assert cod == 0 and "prioridade='N'" in out and "id_contrato='8054'" in out
+    assert "7199999999" not in out and "telefone" not in out
