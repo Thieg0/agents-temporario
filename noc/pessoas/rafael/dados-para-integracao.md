@@ -15,27 +15,8 @@ Token Mangaba: sk-sp9tbr65y4elxmu3hk8nwttd3uvir8y2uwl2fhwor2eh7ghu
 - Token: 20:b55de61e737f533ca0910c84083b13d159746c1edc9c33b32173d53668410674
 - id 25 - Rafael Cardoso de Azevedo`.
 
-## Google (e-mail, agenda e Drive de arquivos)
-- Conta Google de Rafael: ______________________________
-- Conectada em Integrações > Google Workspace: [ ] sim, em ____/____/______
-- Teste no Telegram: "Quais foram os e-mails que recebi no dia de hoje?": [ ] ok
-
 ## Telegram
-- Id do Telegram de Rafael: ______________________
-- Bot (nome e @): ______________________________
 - /sethome feito: [ ] sim
-
-## Plataforma Mangaba
-- Id do agente na plataforma: ______________
-- Cérebro (provedor e modelo): ______________________ (a chave de API é enviada na hora e apagada depois)
-- Descrição, objetivo e personalidade colados (arquivos `descricao.txt`, `objetivo.txt` e `personalidade.txt` desta pasta): [ ] sim
-
-## Skills e arquivos instalados no agente
-- [ ] `ixc-work` (mensagem em `mensagem-skill-ixc-work.md`)
-- [ ] `/opt/data/preparar_os.py` (sha256 começando com `1cfe2530894815ee`)
-- [ ] skill `abrir-os-noc` (arquivo `skill-abrir-os-noc.md` desta pasta; já traz Rafael como colaborador padrão)
-- [ ] Simulação testada (`--abrir ... --colaborador 25`, sem `--gravar`)
-- [ ] Primeiro teste real feito com o Thiego olhando o IXC, em ____/____/______
 
 ## Mensagens prontas (copiar e colar no chat do agente, uma por vez)
 1. `Vou te passar o acesso ao IXC. Primeiro vou te mandar a URL da API e depois te mando o meu token.`
