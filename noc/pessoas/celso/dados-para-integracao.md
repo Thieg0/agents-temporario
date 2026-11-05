@@ -10,25 +10,11 @@ Preencha os campos em branco durante a instalação. **Nunca escreva token, senh
 
 ## IXC
 - URL da API: `https://gestorixc.webfoco.net/webservice/v1`
-- Token: gerado no IXC pelo administrador e enviado só em conversa privada com o agente de Celso, uma vez, no formato `Token: ID:hash`. A mensagem some do chat (é o esperado).
-- Permissões que o token precisa ter: listar contratos, O.S. e funcionários; **criar O.S.** e **executar O.S.**; nada de excluir. Ler Clientes é opcional.
-- Token gerado em: ____/____/______   Enviado ao agente em: ____/____/______
-- Teste de acesso: `python3 /opt/data/preparar_os.py --funcionarios "Celso"` deve mostrar `id 179 - Celso Emanuel Berlink Pereira`.
-
-## Google (e-mail, agenda e Drive de arquivos)
-- Conta Google de Celso: ______________________________
-- Conectada em Integrações > Google Workspace: [ ] sim, em ____/____/______
-- Teste no Telegram: "Quais foram os e-mails que recebi no dia de hoje?": [ ] ok
+- TOKEN IXC: 149:50bf76cdecc5c54b68dfacb9db0d9e5569bcabef4671a6d73c30fcef699fb6c6
 
 ## Telegram
-- Id do Telegram de Celso: ______________________
-- Bot (nome e @): ______________________________
 - /sethome feito: [ ] sim
 
-## Plataforma Mangaba
-- Id do agente na plataforma: ______________
-- Cérebro (provedor e modelo): ______________________ (a chave de API é enviada na hora e apagada depois)
-- Descrição, objetivo e personalidade colados (arquivos `descricao.txt`, `objetivo.txt` e `personalidade.txt` desta pasta): [ ] sim
 
 ## Skills e arquivos instalados no agente
 - [ ] `ixc-work` (mensagem em `mensagem-skill-ixc-work.md`)
