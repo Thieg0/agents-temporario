@@ -193,7 +193,9 @@ def esperado() -> dict[Path, bytes]:
     for p in PESSOAS:
         pasta = AQUI / "pessoas" / p[0]
         saida[pasta / "prompts.md"] = gerar_roteiro(p).encode("utf-8")
-        saida[pasta / "dados-para-integracao.md"] = gerar_dados(p).encode("utf-8")
+        dados = pasta / "dados-para-integracao.md"
+        # a ficha é preenchida à mão depois: só é criada se ainda não existir (nunca sobrescreve o que foi preenchido)
+        saida[dados] = dados.read_bytes() if dados.exists() else gerar_dados(p).encode("utf-8")
         saida[pasta / "skill-ixc-work.md"] = (RAIZ / "ixc-work" / "skill-ixc-work.md").read_bytes()
         for nome in TEXTOS_AGENTE:
             saida[pasta / nome] = (AQUI / nome).read_bytes()
