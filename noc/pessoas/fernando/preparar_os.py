@@ -41,7 +41,7 @@ ASSUNTO_GERAL = "55"
 FILIAL_NOC = "2"
 SETOR_NOC = "14"
 MSG_EXECUTAR = "Acionado parceiro via WhatsApp"
-CAMPOS_ENDERECO = ("endereco", "numero", "bairro", "complemento", "cep")  # copiados do cadastro do cliente; nunca impressos
+CAMPOS_ENDERECO = ("endereco", "numero", "bairro", "complemento", "cep")  # copiados da OS base (que já traz o endereço do contrato); nunca impressos
 LINHAS_DESCRICAO = ("Designação / Vlan", "Cliente Final", "Chamado interno", "Motivo do chamado")
 
 
@@ -210,6 +210,12 @@ def preparar(ixc: Ixc, designacao: str, chamado: str, motivo: str) -> dict:
         avisos.append(f"contrato com status {ct.get('status')!r} (esperado A, ativo): confira antes de abrir")
     if norm(designacao) not in norm(ct.get("descricao_aux_plano_venda")):
         avisos.append("a designação não aparece na descrição auxiliar do contrato: confira se é o contrato certo")
+    notas = []
+    if str(modelo.get("id_cidade") or "") != str(ct.get("cidade") or ""):
+        notas.append(f"a cidade da OS base (id {modelo.get('id_cidade')}) difere da cidade do contrato (id {ct.get('cidade')}): confira antes de gravar")
+    for campo in ("bairro", "cep"):
+        if norm(modelo.get(campo)) != norm(ct.get(campo)) and (modelo.get(campo) or ct.get(campo)):
+            notas.append(f"o {campo} da OS base difere do contrato: confira")
     cliente_id = str(modelo.get("id_cliente") or ct.get("id_cliente") or "")
     campos = {
         "Designação / Vlan": designacao,
@@ -230,6 +236,7 @@ def preparar(ixc: Ixc, designacao: str, chamado: str, motivo: str) -> dict:
         "contrato_nome": f"{contrato_id} - {final}" if final else f"{contrato_id} (nome fora do formato)",
         "descricao": "\n".join(f"{k}: {v}" for k, v in campos.items()),
         "avisos": avisos,
+        "notas": notas,
     }
 
 
@@ -245,6 +252,8 @@ def texto(p: dict) -> str:
         "",
         f"Base: OS {p['os_modelo']} (a mais recente finalizada; {p['os_com_a_designacao']} OS com essa designação, todas no mesmo contrato).",
     ]
+    if p.get("notas"):
+        linhas += ["", "ℹ️ Notas:"] + [f"• {n}" for n in p["notas"]]
     if p["avisos"]:
         linhas += ["", "⚠️ Conferir antes de abrir:"] + [f"• {a}" for a in p["avisos"]]
     return "\n".join(linhas)
@@ -322,19 +331,6 @@ def achar_colaborador(ixc: Ixc, colaborador: str) -> tuple[str, str]:
     return cid, str(regs[0].get("funcionario") or "").strip()
 
 
-def _endereco_da_ultima_os(ixc: Ixc, cliente_id: str) -> tuple[dict, str]:
-    """Plano B quando o token não lê o cadastro de clientes: usa o endereço da OS mais recente do mesmo cliente no NOC."""
-    for pagina in (1, 2, 3):
-        regs, _ = ixc.listar("su_oss_chamado", "id_cliente", cliente_id, page=pagina, rp=30, id_desc=True)
-        for r in regs:
-            if str(r.get("setor") or r.get("id_setor") or "") == SETOR_NOC and str(r.get("id_assunto")) == ASSUNTO_GERAL \
-                    and any(str(r.get(k) or "").strip() for k in ("bairro", "endereco", "cep")):
-                return r, f"OS {r.get('id')} (o token não lê o cadastro de clientes)"
-        if len(regs) < 30:
-            break
-    raise ErroIxc("PARAR: o token não tem permissão para ler Clientes e não achei uma OS anterior deste cliente no NOC para copiar o endereço. Peça ao administrador do IXC para liberar a leitura de Clientes no token.")
-
-
 def corpo_abertura(ixc: Ixc, p: dict, colaborador_id: str) -> dict:
     corpo = {
         "tipo": "C",
@@ -351,23 +347,16 @@ def corpo_abertura(ixc: Ixc, p: dict, colaborador_id: str) -> dict:
         "mensagem": p["descricao"],
         "data_abertura": agora_br(),
     }
-    try:
-        cls, _ = ixc.listar("cliente", "id", p["cliente"], rp=1)
-        cls = [c for c in cls if str(c.get("id")) == p["cliente"]]
-        if not cls:
-            raise ErroIxc(f"PARAR: não achei o cliente {p['cliente']} no IXC")
-        cl, origem = cls[0], "cadastro do cliente"
-    except ErroIxc as e:
-        if "permiss" not in norm(str(e)).replace("ã", "a").replace("ç", "c"):
-            raise
-        cl, origem = _endereco_da_ultima_os(ixc, p["cliente"])
+    modelo = ler_os(ixc, p["os_modelo"])  # a OS anterior desta designação já traz o endereço que a tela puxa do contrato (com a cidade certa)
     for k in CAMPOS_ENDERECO:
-        if str(cl.get(k) or "").strip():
-            corpo[k] = str(cl[k]).strip()
-    cidade = str(cl.get("cidade") or cl.get("id_cidade") or "").strip()
+        if str(modelo.get(k) or "").strip():
+            corpo[k] = str(modelo[k]).strip()
+    cidade = str(modelo.get("id_cidade") or "").strip()
     if cidade not in ("", "0"):
         corpo["id_cidade"] = cidade
-    ixc.origem_endereco = origem
+    if not any(k in corpo for k in CAMPOS_ENDERECO):
+        raise ErroIxc(f"PARAR: a OS base {p['os_modelo']} não tem endereço para copiar. O humano abre a OS pelo caminho manual (Puxar endereço por: Contrato).")
+    ixc.origem_endereco = f"OS {p['os_modelo']} (a anterior desta designação, com o endereço do contrato)"
     return corpo
 
 
@@ -377,10 +366,12 @@ def abrir_os(ixc: Ixc, designacao: str, chamado: str, motivo: str, colaborador: 
         raise ErroIxc("PARAR: não vou abrir a OS com pendências:\n" + "\n".join(f"• {a}" for a in p["avisos"]))
     cid, nome = achar_colaborador(ixc, colaborador)
     corpo = corpo_abertura(ixc, p, cid)
-    visivel = {k: v for k, v in corpo.items() if k not in CAMPOS_ENDERECO and k != "id_cidade"}
-    ends = [k for k in CAMPOS_ENDERECO + ("id_cidade",) if k in corpo]
+    visivel = {k: v for k, v in corpo.items() if k not in CAMPOS_ENDERECO}
+    ends = [k for k in CAMPOS_ENDERECO if k in corpo]
     resumo = [f"Colaborador responsável: id {cid} - {nome}", f"Contrato: {p['contrato_nome']}", "Campos: " + ", ".join(f"{k}={v!r}" for k, v in visivel.items() if k not in ("mensagem",)),
-              f"Endereço (copiado de: {getattr(ixc, 'origem_endereco', 'cadastro do cliente')}; valores não exibidos): {', '.join(ends) or 'nenhum campo preenchido'}", "Descrição:", p["descricao"]]
+              f"Endereço (copiado da {getattr(ixc, 'origem_endereco', 'OS base')}; valores não exibidos): {', '.join(ends) or 'nenhum campo preenchido'}", "Descrição:", p["descricao"]]
+    if p.get("notas"):
+        resumo[-2:-2] = ["Notas: " + " | ".join(p["notas"])]
     if not gravar:
         return "\n".join(["📝 SIMULAÇÃO: nada foi gravado no IXC. Para abrir de verdade, rode de novo com --gravar (só depois do OK do humano)."] + resumo)
     resp = ixc.enviar("su_oss_chamado", corpo)

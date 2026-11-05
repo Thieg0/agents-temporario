@@ -15,16 +15,16 @@ CONTRATO = "8054 - Video Policia -SEAP-I-078 - Teixeira de Freitas - Rua Nova 12
 
 def os_(i, contrato="8054", msg=None, cliente="150"):
     return {"id": str(i), "id_contrato": contrato, "id_cliente": cliente, "status": "F",
-            "mensagem": msg or f"Designação / Vlan:{DES}\nCliente Final: SEAP-I-078", "telefone_contato": "7199999999", "endereco": "Rua Secreta"}
+            "mensagem": msg or f"Designação / Vlan:{DES}\nCliente Final: SEAP-I-078", "telefone_contato": "7199999999", "endereco": "Rua Secreta",
+            "bairro": "Kaikan Sul", "complemento": "SALA SECRETA", "cep": "45992-566", "id_cidade": "2213"}
 
 
 class Fake:
-    def __init__(self, oss, contrato=None, erro=False, sem_id=False, sem_cliente=False):
+    def __init__(self, oss, contrato=None, erro=False, sem_id=False):
         self.oss, self.pedidos, self.erro, self.sem_id = oss, [], erro, sem_id
         self.escritas = []
-        self.sem_cliente = sem_cliente
         self.contrato = {"id": "8054", "id_cliente": "150", "contrato": CONTRATO, "status": "A",
-                         "descricao_aux_plano_venda": f"OI: TAF 5043307 WT: {DES}"} if contrato is None else contrato
+                         "descricao_aux_plano_venda": f"OI: TAF 5043307 WT: {DES}", "bairro": "Kaikan Sul", "cep": "45992-566", "cidade": "2213"} if contrato is None else contrato
         f = self
 
         class H(BaseHTTPRequestHandler):
@@ -58,10 +58,6 @@ class Fake:
                     return self._r(200, {"total": str(len(regs)), "registros": regs})
                 if self.path.endswith("/cliente_contrato"):
                     return self._r(200, {"total": "1", "registros": [f.contrato] if f.contrato else []})
-                if self.path.endswith("/cliente") and f.sem_cliente:
-                    return self._r(200, {"type": "error", "message": "Você não tem permissão para acessar o recurso cliente"})
-                if self.path.endswith("/cliente"):
-                    return self._r(200, {"total": "1", "registros": [{"id": "150", "bairro": "ASA NORTE", "complemento": "TERREO SECRETO", "cep": "70000-000", "cidade": "5564", "endereco": "Rua Secreta", "numero": "9", "fone_celular": "71988887777"}]})
                 if self.path.endswith("/funcionarios"):
                     if c["qtype"] == "funcionarios.id":
                         return self._r(200, {"total": "1", "registros": [{"id": "184", "funcionario": "Maria Souza"}] if c["query"] == "184" else []})
@@ -260,7 +256,7 @@ def test_abrir_simulacao_nao_grava_e_nao_mostra_endereco(monkeypatch, capsys):
     cod, out, _ = rodar(monkeypatch, capsys, f, ABRIR)
     assert cod == 0 and "SIMULAÇÃO" in out and "id 184 - Maria Souza" in out and "Chamado interno: OEMP-42074" in out
     assert f.escritas == []
-    for proibido in ("Rua Secreta", "TERREO SECRETO", "ASA NORTE", "70000-000", "71988887777"):
+    for proibido in ("Rua Secreta", "SALA SECRETA", "Kaikan", "45992-566", "7199999999"):
         assert proibido not in out
 
 
@@ -273,9 +269,9 @@ def test_abrir_gravar_envia_corpo_certo_e_mostra_id(monkeypatch, capsys):
     assert tab == "su_oss_chamado"
     assert c["id_assunto"] == "55" and c["id_cliente"] == "150" and c["id_contrato_kit"] == "8054" and c["id_filial"] == "2"
     assert c["setor"] == "14" and c["id_tecnico"] == "184" and c["prioridade"] == "N" and c["status"] == "A"
-    assert c["bairro"] == "ASA NORTE" and c["id_cidade"] == "5564" and c["endereco"] == "Rua Secreta"
+    assert c["bairro"] == "Kaikan Sul" and c["id_cidade"] == "2213" and c["endereco"] == "Rua Secreta" and c["cep"] == "45992-566" and c["complemento"] == "SALA SECRETA"
     assert c["mensagem"].splitlines() == [f"Designação / Vlan: {DES}", "Cliente Final: Video Policia -SEAP-I-078", "Chamado interno: OEMP-42074", "Motivo do chamado: Inoperante"]
-    for proibido in ("Rua Secreta", "TERREO SECRETO", "71988887777"):
+    for proibido in ("Rua Secreta", "SALA SECRETA", "Kaikan", "7199999999"):
         assert proibido not in out
 
 
@@ -363,30 +359,29 @@ def test_so_o_gravar_escreve(monkeypatch, capsys):
     assert f.escritas == []
 
 
-def os_teste_noc(i=76196):
-    return {"id": str(i), "status": "F", "setor": "14", "id_assunto": "55", "id_cliente": "150", "id_contrato_kit": "8054",
-            "bairro": "ASA NORTE OS", "complemento": "TERREO OS", "cep": "70000-111", "endereco": "", "id_cidade": "5564",
-            "mensagem": f"Designação / Vlan: {DES}\nCliente Final: Video Policia -SEA"}
+
+def test_abrir_endereco_vem_da_os_base_com_a_cidade_certa_visivel(monkeypatch, capsys):
+    cod, out, _ = rodar(monkeypatch, capsys, Fake([os_(75811)]), ABRIR)
+    assert cod == 0 and "id_cidade='2213'" in out and "OS 75811" in out and "valores não exibidos" in out
 
 
-def test_sem_permissao_em_cliente_copia_endereco_da_ultima_os_do_noc(monkeypatch, capsys):
-    f = Fake([os_(75811), os_teste_noc()], sem_cliente=True)
-    cod, out, _ = rodar(monkeypatch, capsys, f, ABRIR)
-    assert cod == 0 and "SIMULAÇÃO" in out and "OS 76196" in out and "não lê o cadastro de clientes" in out
-    for proibido in ("ASA NORTE OS", "TERREO OS", "70000-111", "Rua Secreta"):
-        assert proibido not in out
-    assert f.escritas == []
-
-
-def test_sem_permissao_em_cliente_grava_com_endereco_da_os(monkeypatch, capsys):
-    f = Fake([os_(75811), os_teste_noc()], sem_cliente=True)
-    cod, out, _ = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
-    assert cod == 0 and "🔔 ID DA OS: 90001" in out
-    c = f.escritas[0][1]
-    assert c["bairro"] == "ASA NORTE OS" and c["cep"] == "70000-111" and c["id_cidade"] == "5564"
-
-
-def test_sem_permissao_em_cliente_e_sem_os_anterior_para(monkeypatch, capsys):
-    f = Fake([os_(75811)], sem_cliente=True)
+def test_abrir_os_base_sem_endereco_para(monkeypatch, capsys):
+    o = os_(75811)
+    for k in ("endereco", "bairro", "complemento", "cep", "id_cidade"):
+        o[k] = ""
+    f = Fake([o])
     cod, _, err = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
-    assert cod == 1 and "permissão para ler Clientes" in err and f.escritas == []
+    assert cod == 1 and "não tem endereço" in err and f.escritas == []
+
+
+def test_nota_quando_cidade_da_os_base_difere_do_contrato(monkeypatch, capsys):
+    o = os_(75811)
+    o["id_cidade"] = "5564"  # cidade padrão de Brasília que a tela traz
+    f = Fake([o])
+    cod, out, _ = rodar(monkeypatch, capsys, f, ABRIR)
+    assert cod == 0 and "difere da cidade do contrato" in out and "5564" in out and "2213" in out
+
+
+def test_sem_nota_quando_endereco_bate_com_o_contrato(monkeypatch, capsys):
+    cod, out, _ = rodar(monkeypatch, capsys, Fake([os_(75811)]), ABRIR)
+    assert "Notas" not in out

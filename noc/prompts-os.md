@@ -22,7 +22,7 @@ Rode: python3 /opt/data/preparar_os.py --abrir --designacao "SDR TAF 83108054" -
 Responda sempre em português do Brasil.
 
 Siga a skill abrir-os-noc com este chamado de TESTE: designação SDR TAF 83108054, chamado interno OEMP-TESTE, motivo Inoperante; quem abre: Jennypher (184). Pare na simulação e peça meu OK. Só depois do meu "pode abrir" use --gravar.
-(Conferir no IXC: a OS nasce com assunto Geral, cliente Oi Móvel, contrato 8054, setor NOC, endereço do cadastro do cliente, responsável Jennypher. Anotar qualquer campo diferente. O script nunca apaga: a OS de teste é fechada/apagada pela tela do IXC.)
+(Conferir no IXC: a OS nasce com assunto Geral, cliente Oi Móvel, contrato 8054, setor NOC, endereço do contrato 8054 (igual ao da OS anterior, com a cidade certa), responsável Jennypher. Anotar qualquer campo diferente. O script nunca apaga: a OS de teste é fechada/apagada pela tela do IXC.)
 
 ## Prompt 4: teste real do Executar
 Depois do Prompt 3, escreva ao agente: "Já acionei o parceiro". Ele roda --executar-os com a mensagem "Acionado parceiro via WhatsApp". Conferir na tela: a OS aparece como executada e a mensagem está no histórico.
