@@ -49,9 +49,12 @@ def test_skill_ixc_work_completa_e_segura():
     assert s.startswith("---\nname: ixc-work\n") and "NUNCA use DELETE" in s and "confirmado=true" in s
     for endpoint in ("su_oss_chamado_analisar", "su_oss_chamado_alterar_setor", "su_oss_chamado_executar", "su_oss_chamado_fechar"):
         assert endpoint in s
-    for tema in ("Criar cliente", "Criar contrato", "O.S. abertas", "O.S. em execução", "Finalizar", "vd_contratos_produtos", "abrir-os-noc"):
+    for tema in ("Criar cliente", "Criar contrato", "O.S. abertas", "O.S. em execução", "Finalizar", "vd_contratos_produtos", "Abrir uma O.S."):
         assert tema in s, tema
     assert "DELETE " not in s.replace("NUNCA use DELETE", "")
+    # a skill geral não depende dos nossos scripts nem de outras skills
+    for proibido in ("preparar_os", "abrir-os-noc", ".py", "sha256", "/opt/data", "--gravar", "--comparar"):
+        assert proibido not in s, proibido
 
 
 def test_nenhum_token_no_repositorio():
