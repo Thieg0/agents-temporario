@@ -178,6 +178,21 @@ def achar_os(ixc: Ixc, designacao: str) -> list[dict]:
     return [r for r in regs if alvo in norm(r.get("mensagem"))]
 
 
+def _tem_endereco_no_contrato(ct: dict) -> bool:
+    return any(str(ct.get(k) or "").strip() not in ("", "0") for k in ("cidade", "cep", "bairro"))
+
+
+def _endereco_bate(os_: dict, ct: dict) -> bool:
+    """O endereço da OS bate com o do contrato: mesma cidade e, quando os dois têm, mesmo CEP e mesmo bairro."""
+    if str(os_.get("id_cidade") or "") != str(ct.get("cidade") or ""):
+        return False
+    for campo in ("cep", "bairro"):
+        a, b = norm(os_.get(campo)), norm(ct.get(campo))
+        if a and b and a != b:
+            return False
+    return True
+
+
 def preparar(ixc: Ixc, designacao: str, chamado: str, motivo: str) -> dict:
     designacao = designacao.strip()
     if not designacao:
@@ -200,6 +215,11 @@ def preparar(ixc: Ixc, designacao: str, chamado: str, motivo: str) -> dict:
     nome = str(ct.get("contrato") or "").strip()
     final = cliente_final(nome)
     avisos = []
+    bate = [r for r in (finalizadas + abertas) if _endereco_bate(r, ct)]
+    if bate:
+        modelo = bate[0]  # a mais recente cujo endereço bate com o do contrato (a OS de teste com a cidade padrão de Brasília fica de fora)
+    elif _tem_endereco_no_contrato(ct):
+        avisos.append("nenhuma OS anterior desta designação tem o endereço do contrato (cidade/CEP/bairro): abra pelo caminho manual, com Puxar endereço por: Contrato")
     if abertas:
         avisos.append("JÁ EXISTE OS ABERTA com essa designação (" + ", ".join(str(r.get("id")) for r in abertas[:5]) + "): confirme com o NOC antes de abrir outra (risco de OS duplicada)")
     if not finalizadas:

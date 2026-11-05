@@ -371,15 +371,38 @@ def test_abrir_os_base_sem_endereco_para(monkeypatch, capsys):
         o[k] = ""
     f = Fake([o])
     cod, _, err = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
+    assert cod == 1 and "nenhuma OS anterior desta designação tem o endereço do contrato" in err and f.escritas == []
+
+
+def test_os_base_sem_endereco_e_contrato_sem_endereco_para(monkeypatch, capsys):
+    o = os_(75811)
+    for k in ("endereco", "bairro", "complemento", "cep", "id_cidade"):
+        o[k] = ""
+    ct = {"id": "8054", "id_cliente": "150", "contrato": CONTRATO, "status": "A", "descricao_aux_plano_venda": f"OI: {DES}", "bairro": "", "cep": "", "cidade": ""}
+    f = Fake([o], contrato=ct)
+    cod, _, err = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
     assert cod == 1 and "não tem endereço" in err and f.escritas == []
 
 
-def test_nota_quando_cidade_da_os_base_difere_do_contrato(monkeypatch, capsys):
-    o = os_(75811)
-    o["id_cidade"] = "5564"  # cidade padrão de Brasília que a tela traz
+def test_so_ha_os_com_a_cidade_padrao_de_brasilia_nao_abre(monkeypatch, capsys):
+    o = os_(76196)
+    o["id_cidade"] = "5564"
     f = Fake([o])
-    cod, out, _ = rodar(monkeypatch, capsys, f, ABRIR)
-    assert cod == 0 and "difere da cidade do contrato" in out and "5564" in out and "2213" in out
+    cod, _, err = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
+    assert cod == 1 and "nenhuma OS anterior desta designação tem o endereço do contrato" in err and f.escritas == []
+
+
+def test_escolhe_a_os_cujo_endereco_bate_com_o_contrato_e_nao_a_mais_recente(monkeypatch, capsys):
+    teste = os_(76196)  # a mais recente, mas com a cidade padrão de Brasília
+    teste.update(id_cidade="5564", bairro="ASA NORTE", cep="70000-000", endereco="Endereco Brasilia")
+    certa = os_(75811)
+    cod, out, _ = rodar(monkeypatch, capsys, Fake([teste, certa]), ABRIR)
+    assert cod == 0 and "OS 75811" in out and "76196" not in out and "Notas" not in out
+    f = Fake([teste, certa])
+    cod, out, _ = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
+    assert cod == 0
+    c = f.escritas[0][1]
+    assert c["id_cidade"] == "2213" and c["bairro"] == "Kaikan Sul" and c["endereco"] == "Rua Secreta" and "Brasilia" not in str(c)
 
 
 def test_sem_nota_quando_endereco_bate_com_o_contrato(monkeypatch, capsys):
