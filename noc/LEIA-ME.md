@@ -18,12 +18,12 @@ Nome sugerido do agente: **Assistente NOC**. Os três textos dizem que ele tamb�
 5. Primeiro teste, sem risco: pedir ao agente para triar um incidente fictício ("caiu a PON 3 da OLT do bairro X desde as 14h") e conferir se ele pede o que falta, sugere a severidade e escreve um comunicado em rascunho.
 
 ## O que o agente NÃO faz
-Não acessa roteadores, OLTs nem sistemas de monitoramento (Zabbix, Grafana etc.) enquanto nenhuma ferramenta for conectada a eles. Não altera nada no IXC. Qualquer ação em equipamento fica com a equipe.
+Não acessa roteadores, OLTs nem sistemas de monitoramento (Zabbix, Grafana etc.) enquanto nenhuma ferramenta for conectada a eles. No IXC só abre e executa O.S. pela skill abrir-os-noc, com o OK da pessoa; nunca apaga. Qualquer ação em equipamento fica com a equipe.
 
 ## Próximos passos possíveis (a definir com o setor)
 - Ferramenta de leitura do sistema de monitoramento que o NOC usa.
 - Aviso diário/de plantão por Telegram com as O.S. abertas por região ou assunto.
 - Modelo de comunicado e de post-mortem no padrão da empresa.
 
-## Abertura assistida de OS (versão 1)
-Arquivos: `preparar_os.py`, `skill-abrir-os-noc.md`, `prompts-os.md`. O script só lê o IXC (token do cofre, como o `os_alerta.py`), acha o contrato pela designação e monta a descrição da OS; o colaborador abre a OS na tela. Testes: `python -m pytest teste -q`.
+## Abertura assistida de OS (versão 2)
+Arquivos: `preparar_os.py`, `skill-abrir-os-noc.md`, `prompts-os.md`. O script acha o contrato pela designação, monta a descrição e **abre a OS no IXC** (assunto 55, setor NOC, filial 2, prioridade Normal, endereço do cadastro do cliente), devolvendo "🔔 ID DA OS". Depois executa a OS (Ações → Executar) com "Acionado parceiro via WhatsApp". Por padrão só SIMULA; grava só com `--gravar`, depois do OK do colaborador. O token vem do cofre do agente e o token de cada pessoa precisa permitir criar OS e executar. `--funcionarios "nome"` mostra o id do colaborador. Primeiro teste real: só com o Thiego olhando o IXC (ver `prompts-os.md`). Testes: `python -m pytest teste -q`.

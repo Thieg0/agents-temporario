@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NOC: prepara a abertura de OS no IXC a partir da designação. SOMENTE LEITURA: não grava nada no IXC.
+"""NOC: prepara, ABRE e EXECUTA OS no IXC a partir da designação. Por padrão é SIMULAÇÃO (não grava); só grava com --gravar.
 
 O PRÓPRIO SCRIPT consulta o IXC (token do cofre do agente, de IXC_TOKEN, IXC_TOKEN_FILE ou dados/.ixc_acesso.json; o
 agente nunca vê o token). Fluxo do NOC (Jennypher, 03/11/2026):
@@ -11,6 +11,11 @@ Uso:
   preparar_os.py --designacao "SDR TAF 83108054" --chamado "OEMP-42074" --motivo "Inoperante"
   preparar_os.py --designacao "SDR TAF 83108054" --descobrir     (só nomes de campos; para calibrar)
   preparar_os.py --comparar 75811 76196                          (campos que diferem entre duas OS; para calibrar a gravação)
+  preparar_os.py --funcionarios "nome"                           (id + nome do colaborador, para o --colaborador)
+  preparar_os.py --abrir --designacao ... --chamado ... --motivo ... --colaborador 184 [--gravar]
+        simula (mostra o que seria gravado); com --gravar abre a OS e imprime "ID DA OS: N" (ID vem só da resposta do IXC)
+  preparar_os.py --executar-os 76388 [--mensagem "..."] [--colaborador 184] [--gravar]
+        Ações > Executar na OS (padrão da mensagem: "Acionado parceiro via WhatsApp"); simula sem --gravar
 Opções: --json (saída em JSON)
 
 Para e manda para o humano (nunca chuta) quando: nenhuma OS com a designação; OS com contratos diferentes; contrato sem nome
@@ -28,10 +33,15 @@ import stat
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime, timedelta, timezone
 
 BASE_URL_PADRAO = "https://gestorixc.webfoco.net/webservice/v1"
 COFRE_PADRAO = "/opt/data/cofre-chaves.json"
 ASSUNTO_GERAL = "55"
+FILIAL_NOC = "2"
+SETOR_NOC = "14"
+MSG_EXECUTAR = "Acionado parceiro via WhatsApp"
+CAMPOS_ENDERECO = ("endereco", "numero", "bairro", "complemento", "cep")  # copiados do cadastro do cliente; nunca impressos
 LINHAS_DESCRICAO = ("Designação / Vlan", "Cliente Final", "Chamado interno", "Motivo do chamado")
 
 
@@ -122,6 +132,22 @@ class Ixc:
             total = None
         return [r for r in (dados.get("registros") or []) if isinstance(r, dict)], total
 
+    def enviar(self, tabela: str, corpo: dict) -> dict:
+        """POST de gravação (sem o cabeçalho 'listar'). Devolve o JSON do IXC; levanta ErroIxc se o IXC recusar."""
+        cab = {k: v for k, v in self.cab.items() if k != "ixcsoft"}
+        req = urllib.request.Request(f"{self.url}/{tabela}", data=json.dumps(corpo).encode(), headers=cab, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as r:
+                dados = json.loads(r.read().decode())
+        except urllib.error.HTTPError as e:
+            raise ErroIxc(f"IXC respondeu {e.code} ao gravar") from None
+        except (urllib.error.URLError, TimeoutError, ValueError, OSError):
+            raise ErroIxc("falha de rede ou resposta inválida do IXC ao gravar (confira no IXC se a gravação aconteceu antes de repetir)") from None
+        if not isinstance(dados, dict):
+            raise ErroIxc("resposta inesperada do IXC ao gravar")
+        if dados.get("type") == "error":
+            raise ErroIxc(_limpar(str(dados.get("message", "erro do IXC")))[:300])
+        return dados
 
 
 def norm(txt) -> str:
@@ -137,6 +163,15 @@ def cliente_final(nome_contrato: str) -> str | None:
     return m.group(1).strip() if m and " - " not in m.group(1) else None
 
 
+def contrato_da_os(r: dict) -> str:
+    """Contrato da OS: id_contrato, ou id_contrato_kit (campo que o IXC preenche nas OS do NOC)."""
+    for k in ("id_contrato", "id_contrato_kit"):
+        v = str(r.get(k) or "").strip()
+        if v not in ("", "0"):
+            return v
+    return ""
+
+
 def achar_os(ixc: Ixc, designacao: str) -> list[dict]:
     regs, _ = ixc.listar("su_oss_chamado", "mensagem", designacao, rp=20, id_desc=True, oper="L")
     alvo = norm(designacao)
@@ -150,9 +185,9 @@ def preparar(ixc: Ixc, designacao: str, chamado: str, motivo: str) -> dict:
     achadas = achar_os(ixc, designacao)
     if not achadas:
         raise ErroIxc(f"PARAR: nenhuma OS no IXC com a designação {designacao!r}. Confira o texto e, se estiver certo, o humano abre a OS pelo caminho manual.")
-    contratos = {str(r.get("id_contrato")) for r in achadas if r.get("id_contrato") not in (None, "", "0")}
+    contratos = {contrato_da_os(r) for r in achadas if contrato_da_os(r)}
     if len(contratos) != 1:
-        lista = ", ".join(f"OS {r.get('id')} (contrato {r.get('id_contrato')})" for r in achadas[:8])
+        lista = ", ".join(f"OS {r.get('id')} (contrato {contrato_da_os(r) or '?'})" for r in achadas[:8])
         raise ErroIxc(f"PARAR: as OS com essa designação não apontam para um único contrato ({lista}). O humano decide.")
     abertas = [r for r in achadas if r.get("status") != "F"]
     finalizadas = [r for r in achadas if r.get("status") == "F"]
@@ -223,7 +258,7 @@ def descobrir(ixc: Ixc, designacao: str) -> str:
     seguros = ("id", "id_assunto", "status", "id_contrato", "id_cliente", "id_filial", "id_setor", "setor", "prioridade", "origem_endereco", "id_tecnico", "data_abertura")
     linhas = [f"OS modelo {m.get('id')} ({len(achadas)} com a designação). Campos (só nomes; valores só dos técnicos):", "  " + ", ".join(sorted(m.keys())), "Valores técnicos:"]
     linhas += [f"  {k} = {m.get(k)!r}" for k in seguros if k in m]
-    cts, _ = ixc.listar("cliente_contrato", "id", str(m.get("id_contrato")), rp=1)
+    cts, _ = ixc.listar("cliente_contrato", "id", contrato_da_os(m), rp=1)
     if cts:
         linhas += ["Contrato (só nomes de campos):", "  " + ", ".join(sorted(cts[0].keys()))]
     return "\n".join(linhas)
@@ -269,6 +304,117 @@ def comparar(ixc: Ixc, a: str, b: str, iguais_valores: bool = False) -> str:
     return "\n".join(linhas)
 
 
+ZERO_DATA = "0000-00-00 00:00:00"
+
+
+def agora_br() -> str:
+    return datetime.now(timezone(timedelta(hours=-3))).strftime("%d/%m/%Y %H:%M:%S")
+
+
+def achar_colaborador(ixc: Ixc, colaborador: str) -> tuple[str, str]:
+    cid = str(colaborador or "").strip()
+    if not cid.isdigit():
+        raise ErroIxc("informe --colaborador com o NÚMERO (id) do colaborador; use --funcionarios \"nome\" para descobrir")
+    regs, _ = ixc.listar("funcionarios", "id", cid, rp=1)
+    regs = [r for r in regs if str(r.get("id")) == cid]
+    if not regs:
+        raise ErroIxc(f"PARAR: não achei o colaborador de id {cid} no IXC")
+    return cid, str(regs[0].get("funcionario") or "").strip()
+
+
+def corpo_abertura(ixc: Ixc, p: dict, colaborador_id: str) -> dict:
+    corpo = {
+        "tipo": "C",
+        "id_cliente": p["cliente"],
+        "id_contrato_kit": p["contrato"],
+        "id_assunto": p["assunto"],
+        "id_filial": FILIAL_NOC,
+        "setor": SETOR_NOC,
+        "id_tecnico": colaborador_id,
+        "prioridade": "N",
+        "origem_endereco": "M",
+        "origem_os_aberta": "M",
+        "status": "A",
+        "mensagem": p["descricao"],
+        "data_abertura": agora_br(),
+    }
+    cls, _ = ixc.listar("cliente", "id", p["cliente"], rp=1)
+    cls = [c for c in cls if str(c.get("id")) == p["cliente"]]
+    if not cls:
+        raise ErroIxc(f"PARAR: não achei o cliente {p['cliente']} no IXC")
+    cl = cls[0]
+    for k in CAMPOS_ENDERECO:
+        if str(cl.get(k) or "").strip():
+            corpo[k] = str(cl[k]).strip()
+    if str(cl.get("cidade") or "").strip() not in ("", "0"):
+        corpo["id_cidade"] = str(cl["cidade"]).strip()
+    return corpo
+
+
+def abrir_os(ixc: Ixc, designacao: str, chamado: str, motivo: str, colaborador: str, gravar: bool = False) -> str:
+    p = preparar(ixc, designacao, chamado, motivo)
+    if p["avisos"]:
+        raise ErroIxc("PARAR: não vou abrir a OS com pendências:\n" + "\n".join(f"• {a}" for a in p["avisos"]))
+    cid, nome = achar_colaborador(ixc, colaborador)
+    corpo = corpo_abertura(ixc, p, cid)
+    visivel = {k: v for k, v in corpo.items() if k not in CAMPOS_ENDERECO and k != "id_cidade"}
+    ends = [k for k in CAMPOS_ENDERECO if k in corpo]
+    resumo = [f"Colaborador responsável: id {cid} - {nome}", f"Contrato: {p['contrato_nome']}", "Campos: " + ", ".join(f"{k}={v!r}" for k, v in visivel.items() if k not in ("mensagem",)),
+              f"Endereço (do cadastro do cliente, não exibido): {', '.join(ends) or 'nenhum campo preenchido'}", "Descrição:", p["descricao"]]
+    if not gravar:
+        return "\n".join(["📝 SIMULAÇÃO: nada foi gravado no IXC. Para abrir de verdade, rode de novo com --gravar (só depois do OK do humano)."] + resumo)
+    resp = ixc.enviar("su_oss_chamado", corpo)
+    novo = str(resp.get("id") or "").strip()
+    if not novo.isdigit():
+        raise ErroIxc("O IXC não devolveu o ID da OS. NÃO repita: confira no IXC se a OS foi aberta (procure pela designação) antes de qualquer nova tentativa.")
+    lido, _ = ixc.listar("su_oss_chamado", "id", novo, rp=1)
+    lido = [r for r in lido if str(r.get("id")) == novo]
+    if not lido:
+        return f"🔔 ID DA OS: {novo}\n⚠️ O IXC confirmou a gravação, mas não consegui reler a OS para conferir."
+    r = lido[0]
+    dif = [k for k in ("id_cliente", "id_assunto", "id_filial", "id_tecnico", "prioridade", "status", "mensagem") if str(r.get(k, "")).replace("\r\n", "\n").strip() != str(corpo[k]).strip()]
+    if str(r.get("setor") or r.get("id_setor") or "") != SETOR_NOC:
+        dif.append("setor")
+    if contrato_da_os(r) != p["contrato"]:
+        dif.append("contrato")
+    saida = [f"🔔 ID DA OS: {novo}", f"Protocolo: {r.get('protocolo')}  |  Status: {r.get('status')}"] + resumo[:2]
+    if dif:
+        saida.append("⚠️ Conferir no IXC (o que foi lido difere do enviado): " + ", ".join(dif))
+    else:
+        saida.append("✅ Conferido: a OS foi lida de volta e bate com o que foi enviado.")
+    return "\n".join(saida)
+
+
+def executar_os(ixc: Ixc, os_id: str, mensagem: str, colaborador: str = "", gravar: bool = False) -> str:
+    os_id = str(os_id).strip()
+    if not os_id.isdigit():
+        raise ErroIxc("informe o número da OS")
+    mensagem = (mensagem or "").strip()
+    if not mensagem:
+        raise ErroIxc("a mensagem não pode ficar vazia")
+    r = ler_os(ixc, os_id)
+    if str(r.get("setor") or r.get("id_setor") or "") != SETOR_NOC or str(r.get("id_assunto")) != ASSUNTO_GERAL:
+        raise ErroIxc(f"PARAR: a OS {os_id} não é uma OS do NOC (setor {SETOR_NOC}, assunto {ASSUNTO_GERAL}). Não executo.")
+    if r.get("status") == "F":
+        raise ErroIxc(f"PARAR: a OS {os_id} já está finalizada.")
+    if str(r.get("data_hora_execucao") or ZERO_DATA) != ZERO_DATA:
+        raise ErroIxc(f"PARAR: a OS {os_id} já foi executada ({r.get('data_hora_execucao')}). Não executo de novo.")
+    corpo = {"id_chamado": os_id, "mensagem": mensagem, "status": "EX", "data_inicio": agora_br()}
+    quem = ""
+    if str(colaborador).strip():
+        cid, nome = achar_colaborador(ixc, colaborador)
+        corpo["id_tecnico"] = cid
+        quem = f" (colaborador id {cid} - {nome})"
+    if not gravar:
+        return f"📝 SIMULAÇÃO: nada foi gravado. Executaria a OS {os_id}{quem} com a mensagem: {mensagem!r}. Para executar de verdade, rode de novo com --gravar (só depois do OK do humano)."
+    ixc.enviar("su_oss_chamado_executar", corpo)
+    depois = ler_os(ixc, os_id)
+    ok = str(depois.get("data_hora_execucao") or ZERO_DATA) != ZERO_DATA or depois.get("status") == "EX"
+    if ok:
+        return f"✅ OS {os_id} executada{quem}. Mensagem enviada: {mensagem!r}. Status agora: {depois.get('status')}."
+    return f"⚠️ O IXC aceitou o envio, mas a OS {os_id} não aparece como executada (status {depois.get('status')}). Confira na tela antes de repetir."
+
+
 def funcionarios(ixc: Ixc, nome: str) -> str:
     """Lista id e nome de funcionários (só esses dois campos)."""
     regs, _ = ixc.listar("funcionarios", "funcionario", nome.strip(), rp=20, oper="L")
@@ -293,6 +439,11 @@ def principal(argv=None) -> int:
     ap.add_argument("--motivo", default="")
     ap.add_argument("--descobrir", action="store_true")
     ap.add_argument("--funcionarios", metavar="NOME", help="lista id e nome de funcionários pelo nome")
+    ap.add_argument("--abrir", action="store_true", help="abre a OS (simulação, a menos que use --gravar)")
+    ap.add_argument("--executar-os", metavar="OS", help="Ações > Executar na OS (simulação, a menos que use --gravar)")
+    ap.add_argument("--mensagem", default=MSG_EXECUTAR)
+    ap.add_argument("--colaborador", default="", help="id do colaborador responsável (veja --funcionarios)")
+    ap.add_argument("--gravar", action="store_true", help="grava de verdade no IXC (só depois do OK do humano)")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
     try:
@@ -300,6 +451,12 @@ def principal(argv=None) -> int:
         ixc = Ixc(url, token)
         if a.funcionarios:
             print(funcionarios(ixc, a.funcionarios))
+            return 0
+        if a.executar_os:
+            print(executar_os(ixc, a.executar_os, a.mensagem, a.colaborador, a.gravar))
+            return 0
+        if a.abrir:
+            print(abrir_os(ixc, a.designacao, a.chamado, a.motivo, a.colaborador, a.gravar))
             return 0
         if a.comparar:
             print(comparar(ixc, *a.comparar, iguais_valores=a.mostrar_iguais))

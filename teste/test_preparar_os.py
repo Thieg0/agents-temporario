@@ -19,8 +19,9 @@ def os_(i, contrato="8054", msg=None, cliente="150"):
 
 
 class Fake:
-    def __init__(self, oss, contrato=None, erro=False):
-        self.oss, self.pedidos, self.erro = oss, [], erro
+    def __init__(self, oss, contrato=None, erro=False, sem_id=False):
+        self.oss, self.pedidos, self.erro, self.sem_id = oss, [], erro, sem_id
+        self.escritas = []
         self.contrato = {"id": "8054", "id_cliente": "150", "contrato": CONTRATO, "status": "A",
                          "descricao_aux_plano_venda": f"OI: TAF 5043307 WT: {DES}"} if contrato is None else contrato
         f = self
@@ -36,6 +37,19 @@ class Fake:
                     return self._r(401, {})
                 if f.erro:
                     return self._r(200, {"type": "error", "message": f"falha {TOKEN}"})
+                if self.headers.get("ixcsoft") != "listar":  # gravação
+                    f.escritas.append((self.path.rsplit("/", 1)[1], c))
+                    if self.path.endswith("/su_oss_chamado"):
+                        novo = {"id": "90001", "protocolo": "2026110500001", "setor": c["setor"], "id_contrato_kit": c["id_contrato_kit"],
+                                **{k: v for k, v in c.items() if k not in ("data_abertura",)}}
+                        f.oss.insert(0, novo)
+                        return self._r(200, {"type": "success", "message": "ok"} if f.sem_id else {"type": "success", "id": "90001"})
+                    if self.path.endswith("/su_oss_chamado_executar"):
+                        for o in f.oss:
+                            if o["id"] == c["id_chamado"]:
+                                o["data_hora_execucao"] = "2026-11-05 09:00:00"
+                        return self._r(200, {"type": "success"})
+                    return self._r(404, {})
                 if self.path.endswith("/su_oss_chamado"):
                     regs = f.oss
                     if c.get("qtype") == "su_oss_chamado.id":
@@ -43,7 +57,11 @@ class Fake:
                     return self._r(200, {"total": str(len(regs)), "registros": regs})
                 if self.path.endswith("/cliente_contrato"):
                     return self._r(200, {"total": "1", "registros": [f.contrato] if f.contrato else []})
+                if self.path.endswith("/cliente"):
+                    return self._r(200, {"total": "1", "registros": [{"id": "150", "bairro": "ASA NORTE", "complemento": "TERREO SECRETO", "cep": "70000-000", "cidade": "5564", "endereco": "Rua Secreta", "numero": "9", "fone_celular": "71988887777"}]})
                 if self.path.endswith("/funcionarios"):
+                    if c["qtype"] == "funcionarios.id":
+                        return self._r(200, {"total": "1", "registros": [{"id": "184", "funcionario": "Maria Souza"}] if c["query"] == "184" else []})
                     todos = [{"id": "184", "funcionario": "Maria Souza", "cpf_cnpj": "111.222.333-44", "fone_celular": "7188887777"},
                              {"id": "185", "funcionario": "Pedro Lima", "cpf_cnpj": "999"}]
                     return self._r(200, {"total": "2", "registros": todos})
@@ -229,3 +247,114 @@ def test_funcionarios_lista_id_e_nome_sem_dados_pessoais(monkeypatch, capsys):
 def test_funcionarios_sem_resultado(monkeypatch, capsys):
     cod, out, _ = rodar(monkeypatch, capsys, Fake([]), ["--funcionarios", "zzz"])
     assert cod == 0 and "Nenhum funcionário" in out
+
+
+ABRIR = ["--abrir", "--designacao", DES, "--chamado", "OEMP-42074", "--motivo", "Inoperante", "--colaborador", "184"]
+
+
+def test_abrir_simulacao_nao_grava_e_nao_mostra_endereco(monkeypatch, capsys):
+    f = Fake([os_(75811)])
+    cod, out, _ = rodar(monkeypatch, capsys, f, ABRIR)
+    assert cod == 0 and "SIMULAÇÃO" in out and "id 184 - Maria Souza" in out and "Chamado interno: OEMP-42074" in out
+    assert f.escritas == []
+    for proibido in ("Rua Secreta", "TERREO SECRETO", "ASA NORTE", "70000-000", "71988887777"):
+        assert proibido not in out
+
+
+def test_abrir_gravar_envia_corpo_certo_e_mostra_id(monkeypatch, capsys):
+    f = Fake([os_(75811)])
+    cod, out, _ = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
+    assert cod == 0 and "🔔 ID DA OS: 90001" in out and "Conferido" in out
+    assert len(f.escritas) == 1
+    tab, c = f.escritas[0]
+    assert tab == "su_oss_chamado"
+    assert c["id_assunto"] == "55" and c["id_cliente"] == "150" and c["id_contrato_kit"] == "8054" and c["id_filial"] == "2"
+    assert c["setor"] == "14" and c["id_tecnico"] == "184" and c["prioridade"] == "N" and c["status"] == "A"
+    assert c["bairro"] == "ASA NORTE" and c["id_cidade"] == "5564" and c["endereco"] == "Rua Secreta"
+    assert c["mensagem"].splitlines() == [f"Designação / Vlan: {DES}", "Cliente Final: Video Policia -SEAP-I-078", "Chamado interno: OEMP-42074", "Motivo do chamado: Inoperante"]
+    for proibido in ("Rua Secreta", "TERREO SECRETO", "71988887777"):
+        assert proibido not in out
+
+
+def test_abrir_nao_abre_com_os_aberta_duplicada(monkeypatch, capsys):
+    a = os_(76000); a["status"] = "A"
+    f = Fake([a, os_(75811)])
+    cod, out, err = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
+    assert cod == 1 and "pendências" in err and "JÁ EXISTE OS ABERTA" in err
+    assert f.escritas == []
+
+
+def test_abrir_exige_chamado_e_motivo(monkeypatch, capsys):
+    f = Fake([os_(75811)])
+    cod, _, err = rodar(monkeypatch, capsys, f, ["--abrir", "--designacao", DES, "--colaborador", "184", "--gravar"])
+    assert cod == 1 and f.escritas == []
+
+
+def test_abrir_colaborador_inexistente_ou_invalido(monkeypatch, capsys):
+    for colab in ("999", "abc", ""):
+        f = Fake([os_(75811)])
+        args = ABRIR[:-1] + [colab, "--gravar"]
+        cod, _, err = rodar(monkeypatch, capsys, f, args)
+        assert cod == 1 and f.escritas == [], colab
+
+
+def test_abrir_sem_id_na_resposta_nao_chuta(monkeypatch, capsys):
+    f = Fake([os_(75811)], sem_id=True)
+    cod, out, err = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
+    assert cod == 1 and "NÃO repita" in err and "90001" not in out + err
+
+
+def test_abrir_aceita_contrato_em_id_contrato_kit(monkeypatch, capsys):
+    o = os_(75811); o.pop("id_contrato"); o["id_contrato_kit"] = "8054"
+    cod, out, _ = rodar(monkeypatch, capsys, Fake([o]), ABRIR)
+    assert cod == 0 and "SIMULAÇÃO" in out
+
+
+def test_token_nao_vaza_na_gravacao(monkeypatch, capsys):
+    f = Fake([os_(75811)], erro=True)
+    cod, out, err = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
+    assert cod == 1 and TOKEN not in out + err
+
+
+def os_noc(i=90001, **kw):
+    o = {"id": str(i), "status": "A", "setor": "14", "id_assunto": "55", "data_hora_execucao": "0000-00-00 00:00:00"}
+    o.update(kw)
+    return o
+
+
+def test_executar_simulacao_nao_grava(monkeypatch, capsys):
+    f = Fake([os_noc()])
+    cod, out, _ = rodar(monkeypatch, capsys, f, ["--executar-os", "90001"])
+    assert cod == 0 and "SIMULAÇÃO" in out and "Acionado parceiro via WhatsApp" in out and f.escritas == []
+
+
+def test_executar_gravar_envia_e_confirma(monkeypatch, capsys):
+    f = Fake([os_noc()])
+    cod, out, _ = rodar(monkeypatch, capsys, f, ["--executar-os", "90001", "--gravar", "--colaborador", "184"])
+    assert cod == 0 and "executada" in out
+    tab, c = f.escritas[0]
+    assert tab == "su_oss_chamado_executar" and c["id_chamado"] == "90001" and c["mensagem"] == "Acionado parceiro via WhatsApp"
+    assert c["status"] == "EX" and c["id_tecnico"] == "184"
+
+
+def test_executar_recusa_os_que_nao_e_do_noc_finalizada_ou_ja_executada(monkeypatch, capsys):
+    casos = [os_noc(setor="3"), os_noc(id_assunto="104"), os_noc(status="F"), os_noc(data_hora_execucao="2026-11-03 13:52:01")]
+    for o in casos:
+        f = Fake([o])
+        cod, _, err = rodar(monkeypatch, capsys, f, ["--executar-os", "90001", "--gravar"])
+        assert cod == 1 and f.escritas == [] and "PARAR" in err, o
+
+
+def test_executar_mensagem_vazia_ou_os_inexistente(monkeypatch, capsys):
+    f = Fake([os_noc()])
+    cod, _, _ = rodar(monkeypatch, capsys, f, ["--executar-os", "90001", "--mensagem", "  ", "--gravar"])
+    assert cod == 1 and f.escritas == []
+    f = Fake([os_noc()])
+    cod, _, _ = rodar(monkeypatch, capsys, f, ["--executar-os", "123", "--gravar"])
+    assert cod == 1 and f.escritas == []
+
+
+def test_so_o_gravar_escreve(monkeypatch, capsys):
+    f = Fake([os_noc()])
+    rodar(monkeypatch, capsys, f, ["--executar-os", "90001", "--colaborador", "184"])
+    assert f.escritas == []
