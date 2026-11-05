@@ -1,6 +1,9 @@
 # Dados para integração: João Vítor (NOC)
 
+Token Mangaba: sk-suyhr9jx5exmynphoj58stgkt13e44jno0w3r5rw1iz8egnq
+
 Preencha os campos em branco durante a instalação. **Nunca escreva token, senha ou chave de API neste arquivo.**
+
 
 ## Pessoa
 - Nome no IXC: João Vítor Andrade De Carvalho
@@ -10,32 +13,11 @@ Preencha os campos em branco durante a instalação. **Nunca escreva token, senh
 
 ## IXC
 - URL da API: `https://gestorixc.webfoco.net/webservice/v1`
-- Token: gerado no IXC pelo administrador e enviado só em conversa privada com o agente de João Vítor, uma vez, no formato `Token: ID:hash`. A mensagem some do chat (é o esperado).
-- Permissões que o token precisa ter: listar contratos, O.S. e funcionários; **criar O.S.** e **executar O.S.**; nada de excluir. Ler Clientes é opcional.
-- Token gerado em: ____/____/______   Enviado ao agente em: ____/____/______
-- Teste de acesso: `python3 /opt/data/preparar_os.py --funcionarios "João Vítor"` deve mostrar `id 178 - João Vítor Andrade De Carvalho`.
-
-## Google (e-mail, agenda e Drive de arquivos)
-- Conta Google de João Vítor: ______________________________
-- Conectada em Integrações > Google Workspace: [ ] sim, em ____/____/______
-- Teste no Telegram: "Quais foram os e-mails que recebi no dia de hoje?": [ ] ok
+- Token: 148:fc81bc8d4351087a1d60558a32904ff410a861ce57946de7a22c39a454f292ce
+- `id 178 - João Vítor Andrade De Carvalho`.
 
 ## Telegram
-- Id do Telegram de João Vítor: ______________________
-- Bot (nome e @): ______________________________
 - /sethome feito: [ ] sim
-
-## Plataforma Mangaba
-- Id do agente na plataforma: ______________
-- Cérebro (provedor e modelo): ______________________ (a chave de API é enviada na hora e apagada depois)
-- Descrição, objetivo e personalidade colados (arquivos `descricao.txt`, `objetivo.txt` e `personalidade.txt` desta pasta): [ ] sim
-
-## Skills e arquivos instalados no agente
-- [ ] `ixc-work` (mensagem em `mensagem-skill-ixc-work.md`)
-- [ ] `/opt/data/preparar_os.py` (sha256 começando com `1cfe2530894815ee`)
-- [ ] skill `abrir-os-noc` (arquivo `skill-abrir-os-noc.md` desta pasta; já traz João Vítor como colaborador padrão)
-- [ ] Simulação testada (`--abrir ... --colaborador 178`, sem `--gravar`)
-- [ ] Primeiro teste real feito com o Thiego olhando o IXC, em ____/____/______
 
 ## Mensagens prontas (copiar e colar no chat do agente, uma por vez)
 1. `Vou te passar o acesso ao IXC. Primeiro vou te mandar a URL da API e depois te mando o meu token.`
