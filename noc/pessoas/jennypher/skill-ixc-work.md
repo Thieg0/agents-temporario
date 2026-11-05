@@ -1,6 +1,6 @@
 ---
 name: ixc-work
-description: Trabalhar no IXC da Webfoco pela API: consultar clientes, contratos e O.S. (abertas, em execução, por técnico, assunto ou designação), cadastrar cliente, criar contrato, e fazer ações em O.S. (analisar, encaminhar, executar, finalizar). Use quando pedirem qualquer consulta ou cadastro no IXC. Nunca exclui nada.
+description: Trabalhar no IXC da Webfoco pela API, incluindo consultar clientes, contratos e O.S. (abertas, em execução, por técnico, assunto ou designação), cadastrar cliente, criar contrato, e fazer ações em O.S. (analisar, encaminhar, executar, finalizar). Use quando pedirem qualquer consulta ou cadastro no IXC. Nunca exclui nada.
 ---
 
 # ixc-work (versão 5): guia completo do IXC da Webfoco

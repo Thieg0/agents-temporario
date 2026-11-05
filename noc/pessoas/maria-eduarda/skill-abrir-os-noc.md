@@ -1,6 +1,6 @@
 ---
 name: abrir-os-noc
-description: Abre no IXC a OS de falha de circuito (assunto Geral) quando o colaborador do NOC colar um chamado (OEMP, e-mail ou Opa) e pedir para abrir a OS, devolve o ID da OS e depois registra "Executar" quando o parceiro for acionado. Use sempre que o colaborador colar os dados de um chamado (designação) e pedir para criar, abrir, gerar ou registrar a OS, em qualquer variação: "crie essa O.S", "cria a OS", "abre a OS", "abrir OS", "gera a OS", "abre o chamado".
+description: Abre no IXC a OS de falha de circuito (assunto Geral) quando o colaborador do NOC colar um chamado (OEMP, e-mail ou Opa) e pedir para abrir a OS, devolve o ID da OS e depois registra "Executar" quando o parceiro for acionado. Use sempre que o colaborador colar os dados de um chamado (designação) e pedir para criar, abrir, gerar ou registrar a OS, em qualquer variação, como "crie essa O.S", "cria a OS", "abre a OS", "abrir OS", "gera a OS", "abre o chamado".
 ---
 
 # Abertura de OS no NOC (versão 2: o script grava)

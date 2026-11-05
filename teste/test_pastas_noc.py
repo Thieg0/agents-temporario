@@ -78,3 +78,14 @@ def test_limites_dos_textos_do_agente():
     lim = {"descricao.txt": 300, "objetivo.txt": 500, "personalidade.txt": 3000}
     for f, n in lim.items():
         assert len((RAIZ / "noc" / f).read_text(encoding="utf-8").rstrip("\n")) <= n, f
+
+
+def test_cabecalho_das_skills_e_yaml_valido():
+    import yaml
+    arquivos = list(RAIZ.glob("**/skill-*.md"))
+    assert arquivos
+    for f in arquivos:
+        texto = f.read_text(encoding="utf-8")
+        assert texto.startswith("---\n"), f
+        dados = yaml.safe_load(texto.split("---")[1])
+        assert dados["name"] and 0 < len(dados["description"]) <= 1024, f
