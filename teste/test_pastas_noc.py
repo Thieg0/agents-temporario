@@ -41,24 +41,26 @@ def test_roteiro_tem_todos_os_passos_na_ordem():
 def test_roteiro_nao_deixa_marcador_sem_preencher():
     for p in g.PESSOAS:
         t = g.gerar_roteiro(p)
-        assert not re.search(r"\{(nome|id|completo|ixc_work)\}", t)
+        assert not re.search(r"\{(nome|id|completo)\}", t)
 
 
-def test_mensagem_ixc_work_cabe_no_telegram_e_proibe_delete():
-    m = g.MENSAGEM_IXC_WORK
-    assert len(m) < 4000
-    assert "NUNCA use DELETE" in m and "confirmado=true" in m
+def test_skill_ixc_work_completa_e_segura():
+    s = (RAIZ / "ixc-work" / "skill-ixc-work.md").read_text(encoding="utf-8")
+    assert s.startswith("---\nname: ixc-work\n") and "NUNCA use DELETE" in s and "confirmado=true" in s
     for endpoint in ("su_oss_chamado_analisar", "su_oss_chamado_alterar_setor", "su_oss_chamado_executar", "su_oss_chamado_fechar"):
-        assert endpoint in m
+        assert endpoint in s
+    for tema in ("Criar cliente", "Criar contrato", "O.S. abertas", "O.S. em execução", "Finalizar", "vd_contratos_produtos", "abrir-os-noc"):
+        assert tema in s, tema
+    assert "DELETE " not in s.replace("NUNCA use DELETE", "")
 
 
 def test_nenhum_token_no_repositorio():
     padrao = re.compile(r"\b\d{1,4}:[0-9a-f]{24,}\b")
-    for f in list((RAIZ / "noc").rglob("*.md")) + list((RAIZ / "noc").rglob("*.txt")) + list((RAIZ / "noc").rglob("*.py")):
+    for f in list((RAIZ / "ixc-work").rglob("*.md")) + list((RAIZ / "noc").rglob("*.md")) + list((RAIZ / "noc").rglob("*.txt")) + list((RAIZ / "noc").rglob("*.py")):
         assert not padrao.search(f.read_text(encoding="utf-8")), f
 
 
-def test_cada_pasta_tem_textos_do_agente_dados_e_mensagem_da_skill():
+def test_cada_pasta_tem_textos_do_agente_dados_e_skill_ixc_work():
     for pasta, completo, nome, cid in g.PESSOAS:
         d = RAIZ / "noc" / "pessoas" / pasta
         for f in g.TEXTOS_AGENTE:
@@ -68,8 +70,9 @@ def test_cada_pasta_tem_textos_do_agente_dados_e_mensagem_da_skill():
         assert "https://gestorixc.webfoco.net/webservice/v1" in dados and "criar O.S." in dados
         sha = __import__("hashlib").sha256((RAIZ / "noc" / "preparar_os.py").read_bytes()).hexdigest()[:16]
         assert sha in dados
-        msg = (d / "mensagem-skill-ixc-work.md").read_text(encoding="utf-8")
-        assert g.MENSAGEM_IXC_WORK in msg
+        assert (d / "skill-ixc-work.md").read_bytes() == (RAIZ / "ixc-work" / "skill-ixc-work.md").read_bytes()
+        assert not (d / "mensagem-skill-ixc-work.md").exists()
+        assert "skill-ixc-work.md" in (d / "prompts.md").read_text(encoding="utf-8")
 
 
 def test_limites_dos_textos_do_agente():

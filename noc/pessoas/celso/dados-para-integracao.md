@@ -16,7 +16,7 @@ Preencha os campos em branco durante a instalação. **Nunca escreva token, senh
 - /sethome feito: [ ] sim
 
 ## Skills e arquivos instalados no agente
-- [ ] `ixc-work` (mensagem em `mensagem-skill-ixc-work.md`)
+- [ ] skill `ixc-work` (arquivo `skill-ixc-work.md` desta pasta; guia completo do IXC)
 - [ ] `/opt/data/preparar_os.py` (sha256 começando com `1cfe2530894815ee`)
 - [ ] skill `abrir-os-noc` (arquivo `skill-abrir-os-noc.md` desta pasta; já traz Celso como colaborador padrão)
 - [ ] Simulação testada (`--abrir ... --colaborador 179`, sem `--gravar`)

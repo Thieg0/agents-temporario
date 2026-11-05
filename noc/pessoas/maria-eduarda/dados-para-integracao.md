@@ -31,7 +31,7 @@ Preencha os campos em branco durante a instalação. **Nunca escreva token, senh
 - Descrição, objetivo e personalidade colados (arquivos `descricao.txt`, `objetivo.txt` e `personalidade.txt` desta pasta): [ ] sim
 
 ## Skills e arquivos instalados no agente
-- [ ] `ixc-work` (mensagem em `mensagem-skill-ixc-work.md`)
+- [ ] skill `ixc-work` (arquivo `skill-ixc-work.md` desta pasta; guia completo do IXC)
 - [ ] `/opt/data/preparar_os.py` (sha256 começando com `1cfe2530894815ee`)
 - [ ] skill `abrir-os-noc` (arquivo `skill-abrir-os-noc.md` desta pasta; já traz Maria Eduarda como colaborador padrão)
 - [ ] Simulação testada (`--abrir ... --colaborador 148`, sem `--gravar`)

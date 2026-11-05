@@ -31,3 +31,6 @@ Arquivos: `preparar_os.py`, `skill-abrir-os-noc.md`, `prompts-os.md`. O script a
 ## Uma pasta por pessoa (`pessoas/`)
 Cada pessoa do NOC tem a sua pasta em `noc/pessoas/<nome>/` com o roteiro completo (`prompts.md`): criar o agente, vincular o e-mail (Google), vincular o IXC (URL e token em duas mensagens), a skill geral `ixc-work` (consulta, cadastro, alteração e ações de O.S., sem DELETE) e a skill `abrir-os-noc`, com o id do colaborador já preenchido. Também traz tudo que a pessoa precisa, sem ir buscar em outra pasta: `descricao.txt`, `objetivo.txt`, `personalidade.txt`, `dados-para-integracao.md` (ficha para preencher: conta Google, id do Telegram, bot, datas; sem token), `mensagem-skill-ixc-work.md`, `preparar_os.py` e a skill `skill-abrir-os-noc.md` (já com a pessoa como colaborador padrão).
 As pastas são geradas por `python3 noc/gerar_pastas.py` (a lista de pessoas, os ids e os textos estão nesse arquivo); o teste confere que estão em dia. Ao mudar o `preparar_os.py` ou a skill, rode o gerador de novo e suba tudo junto. Tokens nunca entram no repositório.
+
+## Skill geral do IXC
+A skill `ixc-work` (consultas, cadastros e ações de O.S.) fica em `../ixc-work/skill-ixc-work.md` e é copiada para cada pasta de pessoa (Passo 3 do roteiro).
