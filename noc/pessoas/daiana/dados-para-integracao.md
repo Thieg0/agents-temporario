@@ -1,5 +1,7 @@
 # Dados para integração: Daiana (NOC)
 
+Token Mangaba: sk-sampqpw0j5lraufyddji0trbgc0chx1p19a905nb49y0tbud
+
 Preencha os campos em branco durante a instalação. **Nunca escreva token, senha ou chave de API neste arquivo.**
 
 ## Pessoa
@@ -10,32 +12,11 @@ Preencha os campos em branco durante a instalação. **Nunca escreva token, senh
 
 ## IXC
 - URL da API: `https://gestorixc.webfoco.net/webservice/v1`
-- Token: gerado no IXC pelo administrador e enviado só em conversa privada com o agente de Daiana, uma vez, no formato `Token: ID:hash`. A mensagem some do chat (é o esperado).
-- Permissões que o token precisa ter: listar contratos, O.S. e funcionários; **criar O.S.** e **executar O.S.**; nada de excluir. Ler Clientes é opcional.
-- Token gerado em: ____/____/______   Enviado ao agente em: ____/____/______
-- Teste de acesso: `python3 /opt/data/preparar_os.py --funcionarios "Daiana"` deve mostrar `id 145 - Daiana Valquiria Dias Sousa`.
-
-## Google (e-mail, agenda e Drive de arquivos)
-- Conta Google de Daiana: ______________________________
-- Conectada em Integrações > Google Workspace: [ ] sim, em ____/____/______
-- Teste no Telegram: "Quais foram os e-mails que recebi no dia de hoje?": [ ] ok
+- Token: 88:1c42d2b80ed37ccf73fa23bc88bd7fc0eb70a583bb4ca179c6b641290151123a
+- `id 145 - Daiana Valquiria Dias Sousa`.
 
 ## Telegram
-- Id do Telegram de Daiana: ______________________
-- Bot (nome e @): ______________________________
 - /sethome feito: [ ] sim
-
-## Plataforma Mangaba
-- Id do agente na plataforma: ______________
-- Cérebro (provedor e modelo): ______________________ (a chave de API é enviada na hora e apagada depois)
-- Descrição, objetivo e personalidade colados (arquivos `descricao.txt`, `objetivo.txt` e `personalidade.txt` desta pasta): [ ] sim
-
-## Skills e arquivos instalados no agente
-- [ ] `ixc-work` (mensagem em `mensagem-skill-ixc-work.md`)
-- [ ] `/opt/data/preparar_os.py` (sha256 começando com `1cfe2530894815ee`)
-- [ ] skill `abrir-os-noc` (arquivo `skill-abrir-os-noc.md` desta pasta; já traz Daiana como colaborador padrão)
-- [ ] Simulação testada (`--abrir ... --colaborador 145`, sem `--gravar`)
-- [ ] Primeiro teste real feito com o Thiego olhando o IXC, em ____/____/______
 
 ## Mensagens prontas (copiar e colar no chat do agente, uma por vez)
 1. `Vou te passar o acesso ao IXC. Primeiro vou te mandar a URL da API e depois te mando o meu token.`
