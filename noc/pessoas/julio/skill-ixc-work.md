@@ -7,7 +7,7 @@ description: Trabalhar no IXC da Webfoco pela API: consultar clientes, contratos
 
 Responda sempre em português do Brasil, curto e direto. Este guia vale para todos os colaboradores. Cada colaborador usa o **próprio token** do IXC (guardado no cofre do agente). As permissões do token definem o que dá para fazer: se o IXC responder "sem permissão", avise o responsável pela integração, não tente outro caminho.
 
-Legenda: ✅ confirmado em teste real na Webfoco · 📖 conforme a documentação/exemplos públicos da API do IXC, ainda não testado na Webfoco (confirme com uma consulta pequena ou um registro de teste na primeira vez).
+Legenda das marcas: [confirmado] = confirmado em teste real na Webfoco; [doc oficial] = conforme a documentação/exemplos públicos da API do IXC, ainda não testado na Webfoco; [restrito] = só com instrução específica do responsável pela integração (confirme com uma consulta pequena ou um registro de teste na primeira vez).
 
 Documentação oficial (para consulta humana): wikiapiprovedor.ixcsoft.com.br (referência de campos e endpoints), wiki.ixcsoft.com.br (páginas "... - API") e docs.doc-api-provedor.com (exemplos em várias linguagens). O agente não precisa abri-las: tudo que importa está aqui (a seção 9 resume as páginas "Recursos da API" da wiki oficial, lidas em 05/11/2026; a seção 10 reúne o que NÃO está na documentação e foi descoberto por tentativa e erro nas automações da Webfoco).
 
@@ -32,22 +32,22 @@ Documentação oficial (para consulta humana): wikiapiprovedor.ixcsoft.com.br (r
 
 - URL base: `https://gestorixc.webfoco.net/webservice/v1` (a ferramenta `api_integracao` já guarda a URL e o token).
 - Autenticação: Basic `id:hash` (o token do colaborador). Você nunca vê isso.
-- **Consultar (listar)** ✅: POST na tabela com o cabeçalho `ixcsoft: listar` (a ferramenta tem a opção de listagem) e o corpo:
+- **Consultar (listar)** [confirmado]: POST na tabela com o cabeçalho `ixcsoft: listar` (a ferramenta tem a opção de listagem) e o corpo:
   ```json
   {"qtype": "cliente_contrato.id", "query": "8054", "oper": "=", "page": "1", "rp": "30", "sortname": "cliente_contrato.id", "sortorder": "desc"}
   ```
   - `qtype` = `<tabela>.<campo>` (sempre com o prefixo da tabela).
-  - `oper`: `=` igual · `!=` diferente · `>` `<` `>=` `<=` · `L` contém (LIKE) · `NL` não contém · `IN` está na lista · `NI` não está na lista · `BE` entre dois valores 📖 (`L` e `=` são os já usados na Webfoco; teste os outros numa consulta pequena antes de confiar).
-  - `sortname` / `sortorder` (`asc` ou `desc`): ordenação, ex.: `su_oss_chamado.id` + `desc` para as mais recentes ✅.
+  - `oper`: `=` igual · `!=` diferente · `>` `<` `>=` `<=` · `L` contém (LIKE) · `NL` não contém · `IN` está na lista · `NI` não está na lista · `BE` entre dois valores [doc oficial] (`L` e `=` são os já usados na Webfoco; teste os outros numa consulta pequena antes de confiar).
+  - `sortname` / `sortorder` (`asc` ou `desc`): ordenação, ex.: `su_oss_chamado.id` + `desc` para as mais recentes [confirmado].
   - **Só uma condição por consulta.** Filtros combinados (`grid_param`) não funcionam na Webfoco: faça a consulta pelo critério mais restritivo e filtre o resto no arquivo salvo.
   - `page` e `rp` (registros por página): use no máximo 30 por página e vá páginando; a resposta traz `total` e `registros`.
-  - **Não escolha lista de campos na consulta de O.S.** ✅: já aconteceu de `id_assunto` e `data_prazo_limite` voltarem vazios quando se pediu só alguns campos. O jeito seguro é pedir o registro inteiro, **salvar em arquivo** e mostrar só os campos que interessam. Para contratos e clientes, escolher campos funciona, mas se um campo vier vazio, repita sem escolher campos antes de concluir que está vazio.
-- **Leitura por ID na URL NÃO funciona** ✅ (dá "Recurso não está disponível"). Para ler um registro, filtre: `qtype <tabela>.id`, `oper "="`, `query <id>`, `rp 1`, `page 1`.
-- **Não use `grid_param`** ✅ (a versão da Webfoco dá erro).
-- **Cadastrar:** POST na tabela, sem o cabeçalho `ixcsoft`, corpo em JSON ✅.
-- **Alterar:** PUT em `<tabela>/<id>` com o corpo **completo** do registro (leia antes, mude só o que combinamos) ✅.
-- **Ações em O.S.:** POST em endpoints próprios (ver seção 6) ✅ (Executar testado; os outros conforme a documentação).
-- **Datas:** nos cadastros e alterações, `dd/mm/aaaa` (nunca `aaaa-mm-dd`: o IXC grava errado, ex.: "0000-08-06") ✅. Nas ações de O.S., `dd/mm/aaaa hh:mm:ss` ✅.
+  - **Não escolha lista de campos na consulta de O.S.** [confirmado]: já aconteceu de `id_assunto` e `data_prazo_limite` voltarem vazios quando se pediu só alguns campos. O jeito seguro é pedir o registro inteiro, **salvar em arquivo** e mostrar só os campos que interessam. Para contratos e clientes, escolher campos funciona, mas se um campo vier vazio, repita sem escolher campos antes de concluir que está vazio.
+- **Leitura por ID na URL NÃO funciona** [confirmado] (dá "Recurso não está disponível"). Para ler um registro, filtre: `qtype <tabela>.id`, `oper "="`, `query <id>`, `rp 1`, `page 1`.
+- **Não use `grid_param`** [confirmado] (a versão da Webfoco dá erro).
+- **Cadastrar:** POST na tabela, sem o cabeçalho `ixcsoft`, corpo em JSON [confirmado].
+- **Alterar:** PUT em `<tabela>/<id>` com o corpo **completo** do registro (leia antes, mude só o que combinamos) [confirmado].
+- **Ações em O.S.:** POST em endpoints próprios (ver seção 6) [confirmado] (Executar testado; os outros conforme a documentação).
+- **Datas:** nos cadastros e alterações, `dd/mm/aaaa` (nunca `aaaa-mm-dd`: o IXC grava errado, ex.: "0000-08-06") [confirmado]. Nas ações de O.S., `dd/mm/aaaa hh:mm:ss` [confirmado].
 - A resposta de um POST de cadastro traz `id` do novo registro. Se vier outra coisa (lista de integrações, texto), siga a regra 5.
 
 ### Erros comuns
@@ -76,7 +76,7 @@ Use os campos abaixo como guia; na dúvida, leia **um** registro, salve em arqui
 ### cliente_contrato (contratos)
 `id`, `id_cliente`, `contrato` (descrição; na Webfoco segue o padrão `<id> - <cliente final> - <tipo> - <cidade> ...`), `status`, `descricao_aux_plano_venda` (na Avantia guarda `Desig. Avantia: <designação>`), `data` (data base financeiro), `endereco`, `numero`, `complemento`, `bairro`, `cep`, `cidade`, `referencia`, `latitude`, `longitude`, `id_filial`, `id_vd_contrato`, `id_carteira_cobranca`, `id_vendedor`, `id_tipo_contrato`, `id_modelo`, `id_motivo_inclusao`, `indicacao_contrato_id`, `id_instalador`, `taxa_instalacao`, `cc_previsao`, `id_tipo_documento`.
 
-Status do contrato 📖: `P` pré-contrato, `A` ativo, `I` inativo, `N` negativado, `D` desistiu, `CA` bloqueio automático, `CM` bloqueio manual, `FA` financeiro em atraso. (Na migração Oi→Avantia, contratos novos nascem sempre `P` e nunca se muda.)
+Status do contrato [doc oficial]: `P` pré-contrato, `A` ativo, `I` inativo, `N` negativado, `D` desistiu, `CA` bloqueio automático, `CM` bloqueio manual, `FA` financeiro em atraso. (Na migração Oi→Avantia, contratos novos nascem sempre `P` e nunca se muda.)
 
 ### vd_contratos_produtos (produto/valor do contrato)
 `id`, `id_contrato`, `id_produto`, `descricao`, `qtde`, `valor_unit`, `tipo` (S serviço), `fixar_ip`. O **valor mensal do contrato** está aqui. Produto 509 = "Transporte Lan to Lan" (Video Polícia/L2L).
@@ -84,22 +84,22 @@ Status do contrato 📖: `P` pré-contrato, `A` ativo, `I` inativo, `N` negativa
 ### su_oss_chamado (O.S.)
 `id`, `tipo` (C cliente), `id_cliente`, `id_contrato_kit` (contrato; algumas O.S. usam `id_contrato`), `id_assunto`, `id_filial`, `setor`, `id_tecnico` (colaborador responsável), `status`, `prioridade` (N normal), `mensagem` (descrição), `protocolo`, `data_abertura`, `data_hora_execucao`, `data_fechamento`, endereço (`endereco`, `numero`, `bairro`, `complemento`, `cep`, `id_cidade`).
 
-Status da O.S. ✅: `A` aberta · `AN` análise · `EN` encaminhada · `AS` assumida · `AG` agendada · `EX` execução · `F` finalizada. (`C` = cancelada 📖.)
+Status da O.S. [confirmado]: `A` aberta · `AN` análise · `EN` encaminhada · `AS` assumida · `AG` agendada · `EX` execução · `F` finalizada. (`C` = cancelada [doc oficial].)
 
 ### funcionarios (colaboradores)
 `id`, `funcionario` (nome). Filtre por nome com `L`. O `id` é o que vai em `id_tecnico`. Ids da equipe NOC: Celso 179, Daiana 145, Eliseu 120, Jennypher 184, Maria Eduarda 148, Fernando 71, Marina 101, Rafael 25, Raissa 114, João Vítor 178, Julio 14. Se houver mais de um com o mesmo nome (ex.: Daiana 145 e 111, Marina 101 e 100), vale o ativo listado acima.
 
-### fn_areceber (contas a receber / faturas) 📖 — SOMENTE CONSULTA
+### fn_areceber (contas a receber / faturas) [doc oficial] — SOMENTE CONSULTA
 `id`, `id_cliente`, `id_contrato`, `valor` (total), `valor_aberto` (em aberto), `data_vencimento` (`aaaa-mm-dd`), `status` (`A` aberta, `R` recebida, `C` cancelada), `liberado` (`S`), `tipo_recebimento` (ex.: Boleto, Pix, Gateway), `pix_txid`. Consultas úteis: por contrato (`fn_areceber.id_contrato` `=`), por cliente (`fn_areceber.id_cliente`), em aberto (`fn_areceber.status` `=` `A`). **Não dê baixa, não altere valores nem vencimentos, não cancele**: baixa de pagamento (`fn_areceber_recebimentos_baixas_novo`) e alterações financeiras só com instrução específica do responsável pela integração. Dados financeiros são sensíveis: mostre só o necessário.
 
-### Status de acesso do contrato (`cliente_contrato.status_internet`) 📖
+### Status de acesso do contrato (`cliente_contrato.status_internet`) [doc oficial]
 `A` ativo · `D` desativado · `CM` bloqueio manual · `CA` bloqueio automático · `FA` financeiro em atraso · `AA` aguardando assinatura. (Não confundir com `status` do contrato.)
 
-### Contatos do cliente 📖
+### Contatos do cliente [doc oficial]
 Na tabela `cliente`: `email`, `telefone_celular`, `whatsapp`, `telefone_comercial`. Sensíveis: só mostre se a pessoa pedir e for necessário.
 
 ### Outras tabelas úteis
-`su_oss_assunto` (assuntos de O.S.: 55 = "Geral"; 278 = pausa), `cidade` (códigos: Maceió = 1695, uf 7), `produtos` (catálogo; o valor que vale é o do contrato, não o do catálogo), `filial` (2 = a filial usada nos contratos e O.S. da Webfoco/NOC), `radusuarios` (logins PPPoE/radius do cliente: `id_cliente`, `online` 📖).
+`su_oss_assunto` (assuntos de O.S.: 55 = "Geral"; 278 = pausa), `cidade` (códigos: Maceió = 1695, uf 7), `produtos` (catálogo; o valor que vale é o do contrato, não o do catálogo), `filial` (2 = a filial usada nos contratos e O.S. da Webfoco/NOC), `radusuarios` (logins PPPoE/radius do cliente: `id_cliente`, `online` [doc oficial]).
 
 ---
 
@@ -121,7 +121,7 @@ Sempre: salve a resposta em arquivo, conte o total e mostre **resumo** (id, clie
 `qtype su_oss_chamado.id`, `oper =`, `query <id>`, `rp 1`.
 
 ### 4.5 O.S. abertas (tudo que não está finalizado)
-`qtype su_oss_chamado.status`, `oper !=`, `query F` 📖 (e descarte as `C` canceladas). Se o `!=` não funcionar, faça uma consulta por status (`A`, `AN`, `EN`, `AS`, `AG`, `EX`) e junte.
+`qtype su_oss_chamado.status`, `oper !=`, `query F` [doc oficial] (e descarte as `C` canceladas). Se o `!=` não funcionar, faça uma consulta por status (`A`, `AN`, `EN`, `AS`, `AG`, `EX`) e junte.
 Para "abertas de um técnico/colaborador": acrescente o filtro de `id_tecnico` e conte só o que não for `F`/`C`. A API aceita uma condição por consulta: faça a consulta pelo critério mais restritivo (ex.: `id_tecnico`) e filtre o resto no arquivo salvo.
 Alerta de prazo: O.S. aberta há mais de 48 h (por `data_abertura`), **ignorando** as de assunto 278 (pausa).
 
@@ -133,7 +133,7 @@ Alerta de prazo: O.S. aberta há mais de 48 h (por `data_abertura`), **ignorando
 - Por colaborador: `id_tecnico = <id>`.
 - Por assunto: `id_assunto = <id>`.
 - Por cliente: `id_cliente = <id>`; por contrato: `id_contrato_kit = <id>`.
-- Por data: `data_abertura` com `>=` (formato `aaaa-mm-dd` na consulta costuma funcionar 📖; teste numa consulta pequena).
+- Por data: `data_abertura` com `>=` (formato `aaaa-mm-dd` na consulta costuma funcionar [doc oficial]; teste numa consulta pequena).
 - Por designação: `qtype su_oss_chamado.mensagem`, `oper L`, `query <designação>` (a designação vai na descrição da O.S. do NOC).
 - Pausadas: `id_assunto = 278`.
 
@@ -158,7 +158,7 @@ Alerta de prazo: O.S. aberta há mais de 48 h (por `data_abertura`), **ignorando
 | "Cria o cliente / contrato" | 5.1 / 5.2 (com meu OK) |
 | "Finaliza a O.S. N" | 6.2 e 6.3 (com meu OK) |
 
-Sem prazo: o campo de prazo (`data_prazo_limite`) vem zerado nas O.S. da Webfoco ✅. Para atraso, use "dias em aberto" (hoje − `data_abertura`). O assunto vem como número (`id_assunto`): faça uma leitura da tabela `su_oss_assunto`, salve o mapa id→nome em arquivo e traduza.
+Sem prazo: o campo de prazo (`data_prazo_limite`) vem zerado nas O.S. da Webfoco [confirmado]. Para atraso, use "dias em aberto" (hoje − `data_abertura`). O assunto vem como número (`id_assunto`): faça uma leitura da tabela `su_oss_assunto`, salve o mapa id→nome em arquivo e traduza.
 
 ## 5. Cadastros (precisam do meu OK; um por vez)
 
@@ -216,7 +216,7 @@ Esse é o fluxo validado em produção (≈80 contratos). Para outro tipo de con
 ### 6.1 Abrir uma O.S. (POST na tabela `su_oss_chamado`, com meu OK)
 Antes: identifique o cliente e o contrato (consultas 4.1 a 4.3), o assunto (`su_oss_assunto`), o setor e o responsável (`funcionarios`). **Confira se já existe O.S. aberta (status ≠ F) para o mesmo contrato/designação**: se existir, me mostre o número e não abra outra, a menos que eu mande e cite o número da existente. Mostre o resumo (cliente, contrato, assunto, setor, responsável, descrição, endereço) e espere o OK.
 
-Corpo (valores da Webfoco ✅; copie a estrutura de uma O.S. recente do mesmo tipo quando houver):
+Corpo (valores da Webfoco [confirmado]; copie a estrutura de uma O.S. recente do mesmo tipo quando houver):
 - `tipo "C"`, `id_cliente`, `id_contrato_kit` (contrato), `id_assunto`, `id_filial`, `setor`, `id_tecnico` (responsável), `prioridade` (`N` normal), `status "A"`, `mensagem` (descrição, quebras de linha `\r\n`), `data_abertura` (agora, `dd/mm/aaaa hh:mm:ss`).
 - Padrões que a tela preenche e a API deixa vazios (envie): `protocolo` (novo, `aaaammddhhmmss` + 6 dígitos), `liberado "1"`, `gera_comissao "S"`, `impresso "N"`, `melhor_horario_agenda "Q"`, `origem_cadastro "P"`, `origem_endereco "M"`, `origem_os_aberta "M"`, `origem_endereco_estrutura "M"`, `status_assinatura "A"`, `status_sla "N"`.
 - Endereço: `endereco`, `numero`, `bairro`, `complemento`, `cep`, `id_cidade`, copiados de uma O.S. anterior cujo endereço bate com o do contrato (a mais recente), ou do próprio contrato. Na tela o equivalente é "Puxar endereço por: Contrato" trocando a cidade padrão (Brasília) pela cidade certa.
@@ -230,10 +230,10 @@ Antes de qualquer ação: **leia a O.S.** (filtro por id), mostre status/assunto
 
 | Ação | Endpoint | Corpo | Status esperado |
 |---|---|---|---|
-| **Executar** ✅ | `su_oss_chamado_executar` | `id_chamado`, `mensagem`, `status "EX"`, `data_inicio`, (opcional `id_tecnico`) | `EX` e `data_hora_execucao` preenchida |
-| **Analisar** 📖 | `su_oss_chamado_analisar` | `id_chamado`, `id_setor`, `id_tecnico`, `status "AN"`, `mensagem`, `data_inicio`, `data_final` | `AN` |
-| **Encaminhar (mudar setor)** 📖 | `su_oss_chamado_alterar_setor` | `id_chamado`, `id_setor`, `id_tecnico`, `id_assunto`, `mensagem`, `status "EN"` | `EN` |
-| **Finalizar** 📖 | `su_oss_chamado_fechar` | `id_chamado`, `id_tecnico`, `data_inicio`, `data_final`, `mensagem`, `gera_comissao` (`S`/`N`), `finaliza_processo "S"`, `status "F"` | `F` |
+| **Executar** [confirmado] | `su_oss_chamado_executar` | `id_chamado`, `mensagem`, `status "EX"`, `data_inicio`, (opcional `id_tecnico`) | `EX` e `data_hora_execucao` preenchida |
+| **Analisar** [doc oficial] | `su_oss_chamado_analisar` | `id_chamado`, `id_setor`, `id_tecnico`, `status "AN"`, `mensagem`, `data_inicio`, `data_final` | `AN` |
+| **Encaminhar (mudar setor)** [doc oficial] | `su_oss_chamado_alterar_setor` | `id_chamado`, `id_setor`, `id_tecnico`, `id_assunto`, `mensagem`, `status "EN"` | `EN` |
+| **Finalizar** [doc oficial] | `su_oss_chamado_fechar` | `id_chamado`, `id_tecnico`, `data_inicio`, `data_final`, `mensagem`, `gera_comissao` (`S`/`N`), `finaliza_processo "S"`, `status "F"` | `F` |
 
 Notas:
 - **Executar** foi testado de verdade (O.S. 76473 e 76495): "Registro inserido com sucesso" e a O.S. passou a `EX`. Mensagem usada no NOC: `Acionado parceiro <nome> via WhatsApp`.
@@ -267,9 +267,9 @@ Notas:
 6. Depois do envio: li de volta, comparei com o esperado e informei o ID e o que bateu?
 Se qualquer resposta for "não", pare e resolva antes de enviar.
 
-## 9. Outros recursos da API oficial do IXC (📖: só da documentação, não testados na Webfoco)
+## 9. Outros recursos da API oficial do IXC ([doc oficial]: só da documentação, não testados na Webfoco)
 
-Regra para tudo desta seção: **consultar é livre; qualquer coisa que mude algo (POST/GET de ação) só com o OK da pessoa e, nas marcadas ⛔, só com instrução específica do responsável pela integração.** Nomes de endpoint com número no final (ex.: `radusuarios_25452`) mudam entre versões do IXC: confira com o responsável pela integração antes de usar.
+Regra para tudo desta seção: **consultar é livre; qualquer coisa que mude algo (POST/GET de ação) só com o OK da pessoa e, nas marcadas [restrito], só com instrução específica do responsável pela integração.** Nomes de endpoint com número no final (ex.: `radusuarios_25452`) mudam entre versões do IXC: confira com o responsável pela integração antes de usar.
 
 ### 9.1 Consultas extras
 - **Cliente por CPF/CNPJ:** `qtype cnpj_cpf` (sem prefixo funciona na doc oficial; com `cliente.cnpj_cpf` também), `oper =`, `query` no formato gravado (com pontuação: `115.895.877-31`). Teste os dois formatos se não achar.
@@ -277,24 +277,24 @@ Regra para tudo desta seção: **consultar é livre; qualquer coisa que mude alg
 - **Contratos por status de acesso:** `cliente_contrato` com filtro em `status_internet` (ex.: `FA` = financeiro em atraso). Na doc é feito com `grid_param`, que **não funciona na Webfoco**: consulte por `qtype cliente_contrato.status_internet`, `oper =`, `query FA`.
 - **Produtos de um contrato:** `vd_contratos_produtos.id_contrato`. Serviços adicionais do contrato: `cliente_contrato_servicos.id_contrato`. Comodatos: `cliente_contrato_comodato`.
 - **Boletos/faturas** (`fn_areceber`): abertos de um cliente = `qtype fn_areceber.id_cliente` + filtrar no arquivo `liberado = S`, `status` diferente de `C` e `R`. Pagos numa data: `qtype fn_areceber.pagamento_data`, `query dd/mm/aaaa`. Use `rp` alto só se necessário; prefira páginas de 30.
-- **Boleto (dados, arquivo, e-mail, SMS)** 📖 via ação `get_boleto` com `boletos` (id da fatura), `juro` e `multa` (S/N), `atualiza_boleto` (S/N) e `tipo_boleto` = `dados` (só consulta), `arquivo` (PDF; `base64` = S), `mail` ou `sms` (**envia ao cliente: só com OK da pessoa**).
+- **Boleto (dados, arquivo, e-mail, SMS)** [doc oficial] via ação `get_boleto` com `boletos` (id da fatura), `juro` e `multa` (S/N), `atualiza_boleto` (S/N) e `tipo_boleto` = `dados` (só consulta), `arquivo` (PDF; `base64` = S), `mail` ou `sms` (**envia ao cliente: só com OK da pessoa**).
 - **Atendimentos (tickets):** tabela `su_ticket` (`protocolo`, `id_cliente`, `su_status`, `status`). Status do atendimento: `T` pendente, `C` aguardando cliente, `EX` execução, `OSAB` OS aberta, `OSEX` OS em execução, `OSAG` OS agendada, `F` finalizado. `su_status`: `N` novo, `P` pendente, `EP` em progresso, `S` solucionado, `C` cancelado. Prioridade: `B` baixa, `M` normal, `A` alta, `C` crítica.
 - **Outras tabelas de leitura:** `cdr` (registros de chamadas VoIP), `df_projeto` (projetos), `vd_pedido_venda` (pedidos de venda), `radpop_ocorrencias` (ocorrências/soluções), `radpop_radio_cliente_fibra` (clientes fibra), `contas` (contas financeiras), `radgrupos` (planos de velocidade), `produtos`.
 - **Viabilidade técnica** (`viabilidade_tecnica`): por endereço (`endereco`, `numero`, `cidade`, `estado`, `cep`) ou por `latitude` e `longitude`.
 - **Sequência de protocolo:** `gerar_protocolo_atendimento` devolve um novo número de protocolo (antes de abrir atendimento; sempre confira que o protocolo não existe).
 
-### 9.2 Ações com efeito (sempre com OK; ⛔ = só com instrução específica do responsável pela integração)
+### 9.2 Ações com efeito (sempre com OK; [restrito] = só com instrução específica do responsável pela integração)
 - **Atendimento novo** (`POST su_ticket`): obrigatórios `protocolo` (novo, de `gerar_protocolo_atendimento`), `id_cliente`, `origem_endereco` (`C` cliente, `L` login, `CC` contrato, `M` manual), `menssagem` (sim, com esse erro de grafia na API), `su_status`, `status`, `id_ticket_setor`, `prioridade`, `id_ticket_origem` (`I` interna). Cheque duplicidade do protocolo antes.
 - **Interação em atendimento** (`POST su_mensagens`): `id_ticket`, `id_cliente`, `mensagem`, `operador`, `su_status`, `status`, `existe_pendencia_externa`.
 - **Transferir atendimento** (`POST su_transf_atendimento_<n>`): `id_atendimento`, `data_transferencia` (maior que agora), `id_departamento_origem`, `id_departamento_destino`, `id_responsavel_tecnico`.
-- **Inserir produto/plano no contrato** (`POST vd_contratos_produtos`): `tipo` (`I` internet, `T` telefonia, `S` serviços, `SVA`, `TV`), `id_contrato`, `id_plano` (internet/telefonia) ou `id_produto` (serviços/SVA/TV), `qtde`, `valor_unit` (aceita `1.234,56`), `descricao`. ⛔ em contratos ativos (mexe em cobrança).
-- **Desconto/acréscimo no contrato** (`POST cliente_contrato_descontos_servicos`) ⛔.
+- **Inserir produto/plano no contrato** (`POST vd_contratos_produtos`): `tipo` (`I` internet, `T` telefonia, `S` serviços, `SVA`, `TV`), `id_contrato`, `id_plano` (internet/telefonia) ou `id_produto` (serviços/SVA/TV), `qtde`, `valor_unit` (aceita `1.234,56`), `descricao`. [restrito] em contratos ativos (mexe em cobrança).
+- **Desconto/acréscimo no contrato** (`POST cliente_contrato_descontos_servicos`) [restrito].
 - **Lead** (`POST contato`): `nome` obrigatório, `lead = S`, telefones (`fone_celular`, `fone_whatsapp`...), `email`, endereço. Cadastro simples de potencial cliente.
 - **Fornecedor** (`POST fornecedor`): `razao`, `data` (dd/mm/aaaa), `tipo_pessoa` (F/J/E), `ativo`, `cidade` (id) obrigatórios.
 - **Comodato na finalização de O.S.** (`POST su_oss_mov_comodato_wiz_novo`): `id_oss_chamado`, `id_contrato`, `id_produto`, `qtde_saida`, `valor_unitario` etc. Só quando a O.S. exige entregar equipamento; use o modelo de uma movimentação existente.
-- **Processos (workflow)**: `wfl_tarefa` (criar tarefa de processo) e disparar/finalizar tarefa de O.S. com `su_oss_chamado_fechar` usando `id_tarefa_atual`, `id_proxima_tarefa`, `id_proxima_tarefa_aux` ⛔ (só se o responsável pela integração explicar o processo).
-- **Contrato/login (⛔ todos):** ativar contrato (`cliente_contrato_ativar_cliente`), desbloqueio de confiança (`desbloqueio_confianca`), liberar temporariamente (`cliente_contrato_btn_lib_temp_<n>`), liberação de redução de velocidade (`liberacao_reducao_contrato_<n>`), limpar MAC (`radusuarios_<n>` com `get_id`), desconectar login (`desconectar_clientes`, `id` do login), alterar status de acesso. Afetam o cliente final na hora (internet cai ou volta): nunca por iniciativa do agente.
-- **Receber título / baixa** (`fn_areceber_recebimentos_baixas_novo`) ⛔: data em `dd/mm/aaaa` (ISO é recusada). O agente não dá baixa.
+- **Processos (workflow)**: `wfl_tarefa` (criar tarefa de processo) e disparar/finalizar tarefa de O.S. com `su_oss_chamado_fechar` usando `id_tarefa_atual`, `id_proxima_tarefa`, `id_proxima_tarefa_aux` [restrito] (só se o responsável pela integração explicar o processo).
+- **Contrato/login ([restrito] todos):** ativar contrato (`cliente_contrato_ativar_cliente`), desbloqueio de confiança (`desbloqueio_confianca`), liberar temporariamente (`cliente_contrato_btn_lib_temp_<n>`), liberação de redução de velocidade (`liberacao_reducao_contrato_<n>`), limpar MAC (`radusuarios_<n>` com `get_id`), desconectar login (`desconectar_clientes`, `id` do login), alterar status de acesso. Afetam o cliente final na hora (internet cai ou volta): nunca por iniciativa do agente.
+- **Receber título / baixa** (`fn_areceber_recebimentos_baixas_novo`) [restrito]: data em `dd/mm/aaaa` (ISO é recusada). O agente não dá baixa.
 
 ### 9.3 Detalhes das ações de O.S. (complemento da seção 6.2)
 - **Finalizar:** o corpo da doc inclui também `id_su_diagnostico` (opcional) e, em processos com tarefas, `id_tarefa_atual`, `id_proxima_tarefa` (use `0` se for a última), `finaliza_processo` (`S` na última tarefa, `N` nas outras). Sem processo, use `finaliza_processo = S`.
@@ -315,21 +315,21 @@ Tudo aqui foi aprendido errando e acertando nas automações da Webfoco (migraç
 ### 10.1 Formatos de data e valor
 | Onde | Formato | Observação |
 |---|---|---|
-| Cadastro/edição (POST/PUT) de contrato e demais tabelas | `dd/mm/aaaa` | `aaaa-mm-dd` é gravado errado: virou `"0000-08-06"` ✅ |
-| Ações de O.S. (executar, analisar, finalizar...) | `dd/mm/aaaa hh:mm:ss` | horário de Brasília (UTC−3) ✅ |
+| Cadastro/edição (POST/PUT) de contrato e demais tabelas | `dd/mm/aaaa` | `aaaa-mm-dd` é gravado errado: virou `"0000-08-06"` [confirmado] |
+| Ações de O.S. (executar, analisar, finalizar...) | `dd/mm/aaaa hh:mm:ss` | horário de Brasília (UTC−3) [confirmado] |
 | Leitura (resposta do IXC) | `aaaa-mm-dd` ou `aaaa-mm-dd hh:mm:ss` | `09/10/2026` e `2026-10-09` são a mesma data: **não é divergência** |
 | Data vazia | `0000-00-00` / `0000-00-00 00:00:00` | significa "não preenchido" (ex.: `data_hora_execucao` zerada = O.S. ainda não executada) |
-| Valor monetário (`valor_unit`) | texto com ponto e 2 casas: `"1369.35"` | foi o formato aceito na Webfoco ✅ (a doc cita máscara com vírgula) |
-| Mensagem/descrição da O.S. | quebras de linha como `\r\n` | é como a tela do IXC grava ✅ |
-| Protocolo de O.S. | `aaaammddhhmmss` + 6 dígitos aleatórios | igual ao que a tela gera (Brasília) ✅ |
+| Valor monetário (`valor_unit`) | texto com ponto e 2 casas: `"1369.35"` | foi o formato aceito na Webfoco [confirmado] (a doc cita máscara com vírgula) |
+| Mensagem/descrição da O.S. | quebras de linha como `\r\n` | é como a tela do IXC grava [confirmado] |
+| Protocolo de O.S. | `aaaammddhhmmss` + 6 dígitos aleatórios | igual ao que a tela gera (Brasília) [confirmado] |
 | Campo `data` do contrato ("Data base financeiro") | `dd/mm/aaaa`, **obrigatório no POST e no PUT**, = hoje | |
 | `pago_ate_data` | **não enviar**; o IXC preenche/ignora sozinho | já apareceu `"0000-08-06"`; a equipe não usa |
 
 ### 10.2 Contrato: campos que o IXC exige e recusa
-- **Regime contábil (`cc_previsao`)**: obrigatório. Sem ele: *"Preencha Regime contábil - CRE"*. Valores: `P` = Configuração padrão (Parâmetros), `S` caixa, `N` competência, `M` manual. Nos contratos Avantia: `P` ✅. Vem do modelo; o erro apareceu quando o agente remontou o corpo à mão e esqueceu esse campo.
+- **Regime contábil (`cc_previsao`)**: obrigatório. Sem ele: *"Preencha Regime contábil - CRE"*. Valores: `P` = Configuração padrão (Parâmetros), `S` caixa, `N` competência, `M` manual. Nos contratos Avantia: `P` [confirmado]. Vem do modelo; o erro apareceu quando o agente remontou o corpo à mão e esqueceu esse campo.
 - **`id_tipo_documento`** = `"501"` nos contratos Avantia (vem do modelo).
 - **Campos de cancelamento/desativação** no corpo de pré-contrato (status `P`) fazem o IXC recusar com *"Não é permitido cancelar contratos com status pré-contrato"*. Tire: `data_cancelamento`, `data_acesso_desativado`, `pago_ate_data` e qualquer chave com "cancel", "desativ" ou "desist" vazia/zerada.
-- **PUT só passa com o corpo COMPLETO** (o registro inteiro lido, menos `id`/`ultima_atualizacao`/`data_cadastro_sistema` e os campos acima), mudando só o combinado. PUT com poucos campos é recusado ✅.
+- **PUT só passa com o corpo COMPLETO** (o registro inteiro lido, menos `id`/`ultima_atualizacao`/`data_cadastro_sistema` e os campos acima), mudando só o combinado. PUT com poucos campos é recusado [confirmado].
 - **POST de contrato novo** leva o mesmo corpo-base (84 chaves no modelo Avantia 10172). Ordem de criação: POST (com `ID NOVO` na descrição) → pegar o **ID devolvido** → PUT com o ID real na descrição → POST do produto.
 - **A resposta de listagem não é o corpo.** Ela vem como `{"page","total","registros":[...]}`: o registro está em `registros[0]`. Usar o arquivo raiz como corpo já deu erro.
 - **Cópia do JSON para a chamada** já perdeu campos, inventou chaves (`avalista_1`, `avalista_2`...) e trocou acentos. Por isso: montar o corpo a partir do registro lido (sem digitar à mão), validar (quantidade de chaves, sem `id`, sem `registros`), copiar **literalmente**, e conferir lendo de volta depois.
@@ -342,7 +342,7 @@ Tudo aqui foi aprendido errando e acertando nas automações da Webfoco (migraç
 - **Contrato aberto na tela trava a edição** (*"Feche o formulário e tente novamente"*): durante o lote, ninguém abre os contratos que o agente está criando.
 
 ### 10.3 Cliente
-- Corpo-base = **registro inteiro de um cliente-modelo** (≈162 chaves) sem `id`, `data_cadastro`, `ultima_atualizacao` e vazios de cancelamento/desativação. Corpo só com os campos de tela (19 chaves) é aceito mas faltam ≈17 padrões (ISS, cobrança, régua...) ✅.
+- Corpo-base = **registro inteiro de um cliente-modelo** (≈162 chaves) sem `id`, `data_cadastro`, `ultima_atualizacao` e vazios de cancelamento/desativação. Corpo só com os campos de tela (19 chaves) é aceito mas faltam ≈17 padrões (ISS, cobrança, régua...) [confirmado].
 - `tipo_documento_identificacao`: CNPJ = **13**; CPF ainda desconhecido (cadastrar pessoa física na mão).
 - Cidade é o **código** (tabela `cidade`), nunca o nome. Maceió = 1695 (uf 7). Brasília = 5564 (é a cidade padrão da tela, quase sempre errada: confira).
 
@@ -351,11 +351,11 @@ Tudo aqui foi aprendido errando e acertando nas automações da Webfoco (migraç
 - **O.S. criada pela API deixa vazios campos que a tela preenche sozinha.** Para ficar igual à da tela, enviar: `protocolo` (novo), `liberado "1"`, `gera_comissao "S"`, `impresso "N"`, `melhor_horario_agenda "Q"`, `origem_cadastro "P"`, `origem_endereco_estrutura "M"`, `status_assinatura "A"`, `status_sla "N"`, `origem_endereco "M"`, `origem_os_aberta "M"`, `tipo "C"`, `prioridade "N"` (normal), `status "A"`, `data_abertura` (agora). Descoberto comparando a O.S. 76473 (API) com a 75811 (tela).
 - **Endereço da O.S.:** na tela escolhe-se "Puxar endereço por: Contrato" e troca-se a cidade padrão (Brasília) pela cidade certa do contrato. Pela API o jeito seguro foi **copiar o endereço de uma O.S. anterior cujo endereço bate com o do contrato** (cidade, CEP, bairro), escolhendo a mais recente. Ignorar O.S. de teste com endereço de Brasília como base (ex.: 76196). Campos: `endereco`, `numero`, `bairro`, `complemento`, `cep`, `id_cidade`.
 - **Duplicata de O.S.:** não abrir se já existe O.S. aberta (status ≠ F) com a mesma designação; abrir outra só se a pessoa mandar e citar o número da existente.
-- **Executar (Ações → Executar)** ✅: `POST su_oss_chamado_executar` com `id_chamado`, `mensagem`, `status "EX"`, `data_inicio` (`dd/mm/aaaa hh:mm:ss`) e, opcionalmente, `id_tecnico`. A **mensagem vai no próprio POST** (não existe um "salvar mensagem" separado na API). Resposta de sucesso: *"Registro inserido com sucesso"*. Confirmação: reler a O.S. e ver `status = EX` e `data_hora_execucao` preenchida (≠ zerada). Não executar O.S. já executada ou finalizada.
+- **Executar (Ações → Executar)** [confirmado]: `POST su_oss_chamado_executar` com `id_chamado`, `mensagem`, `status "EX"`, `data_inicio` (`dd/mm/aaaa hh:mm:ss`) e, opcionalmente, `id_tecnico`. A **mensagem vai no próprio POST** (não existe um "salvar mensagem" separado na API). Resposta de sucesso: *"Registro inserido com sucesso"*. Confirmação: reler a O.S. e ver `status = EX` e `data_hora_execucao` preenchida (≠ zerada). Não executar O.S. já executada ou finalizada.
 - **Mensagem do Executar no NOC:** `Acionado parceiro <nome do parceiro> via WhatsApp` (a pessoa informa o parceiro; nunca supor). O texto do agente foi aprovado assim.
 - **Descrição da O.S. do NOC (4 linhas):** `Designação / Vlan: …`, `Cliente Final: …` (tirado do nome do contrato `<id> - <final> - …`), `Chamado interno: …`, `Motivo do chamado: …`.
 - **Quem é o responsável:** `id_tecnico` = id do colaborador (tabela `funcionarios`), o "Colaborador responsável" da tela.
-- **Alerta de prazo:** aberta = `status ≠ F` (e ≠ C); pausada = `id_assunto 278` (Pausado/Congelado); alerta = aberta há mais de 48 h contando de `data_abertura` (Brasília), exceto pausadas; grupos: 🔴 mais de 30 dias, 🟠 7 a 30 dias, 🟡 48 h a 7 dias. `data_prazo_limite` e variações (`data_prev_final`, `data_agenda`...) vêm **zeradas**: não existe prazo para ordenar; use dias em aberto. O assunto vem como `id_assunto` (número).
+- **Alerta de prazo:** aberta = `status ≠ F` (e ≠ C); pausada = `id_assunto 278` (Pausado/Congelado); alerta = aberta há mais de 48 h contando de `data_abertura` (Brasília), exceto pausadas; grupos: crítico (mais de 30 dias), atenção (7 a 30 dias) e recente (48 h a 7 dias). `data_prazo_limite` e variações (`data_prev_final`, `data_agenda`...) vêm **zeradas**: não existe prazo para ordenar; use dias em aberto. O assunto vem como `id_assunto` (número).
 - **Conferir a contagem:** o `total` da resposta do IXC tem que bater com o que você recebeu; se uma O.S. fechar entre duas leituras, o número muda (não é erro).
 
 ### 10.5 Consultas: o que funciona e o que falha
