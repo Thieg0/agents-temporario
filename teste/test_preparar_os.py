@@ -43,6 +43,10 @@ class Fake:
                     return self._r(200, {"total": str(len(regs)), "registros": regs})
                 if self.path.endswith("/cliente_contrato"):
                     return self._r(200, {"total": "1", "registros": [f.contrato] if f.contrato else []})
+                if self.path.endswith("/funcionarios"):
+                    todos = [{"id": "184", "funcionario": "Maria Souza", "cpf_cnpj": "111.222.333-44", "fone_celular": "7188887777"},
+                             {"id": "185", "funcionario": "Pedro Lima", "cpf_cnpj": "999"}]
+                    return self._r(200, {"total": "2", "registros": todos})
                 self._r(404, {})
 
             def _r(self, cod, obj):
@@ -211,3 +215,17 @@ def test_comparar_mostrar_iguais(monkeypatch, capsys):
     cod, out, _ = rodar(monkeypatch, capsys, Fake([a, b]), ["--comparar", "75811", "76196", "--mostrar-iguais"])
     assert cod == 0 and "prioridade='N'" in out and "id_contrato='8054'" in out
     assert "7199999999" not in out and "telefone" not in out
+
+
+def test_funcionarios_lista_id_e_nome_sem_dados_pessoais(monkeypatch, capsys):
+    f = Fake([])
+    cod, out, _ = rodar(monkeypatch, capsys, f, ["--funcionarios", "maria"])
+    assert cod == 0 and "id 184 - Maria Souza" in out and "Pedro" not in out
+    for proibido in ("111.222", "7188887777"):
+        assert proibido not in out
+    assert all(p[0].endswith("/funcionarios") for p in f.pedidos)
+
+
+def test_funcionarios_sem_resultado(monkeypatch, capsys):
+    cod, out, _ = rodar(monkeypatch, capsys, Fake([]), ["--funcionarios", "zzz"])
+    assert cod == 0 and "Nenhum funcionário" in out

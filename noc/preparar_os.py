@@ -269,6 +269,21 @@ def comparar(ixc: Ixc, a: str, b: str, iguais_valores: bool = False) -> str:
     return "\n".join(linhas)
 
 
+def funcionarios(ixc: Ixc, nome: str) -> str:
+    """Lista id e nome de funcionários (só esses dois campos)."""
+    regs, _ = ixc.listar("funcionarios", "funcionario", nome.strip(), rp=20, oper="L")
+    alvo = norm(nome)
+    linhas = []
+    for r in regs:
+        n = str(r.get("funcionario", "")).strip()
+        if alvo and alvo not in norm(n):
+            continue
+        linhas.append(f"id {r.get('id')} - {n}")
+    if not linhas:
+        return f"Nenhum funcionário encontrado para '{nome}'."
+    return "\n".join(linhas)
+
+
 def principal(argv=None) -> int:
     ap = argparse.ArgumentParser(description="NOC: prepara a abertura de OS (somente leitura)")
     ap.add_argument("--designacao", default="")
@@ -277,11 +292,15 @@ def principal(argv=None) -> int:
     ap.add_argument("--chamado", default="")
     ap.add_argument("--motivo", default="")
     ap.add_argument("--descobrir", action="store_true")
+    ap.add_argument("--funcionarios", metavar="NOME", help="lista id e nome de funcionários pelo nome")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
     try:
         url, token, _ = acesso_ixc()
         ixc = Ixc(url, token)
+        if a.funcionarios:
+            print(funcionarios(ixc, a.funcionarios))
+            return 0
         if a.comparar:
             print(comparar(ixc, *a.comparar, iguais_valores=a.mostrar_iguais))
             return 0
