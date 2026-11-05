@@ -14,6 +14,7 @@ Uso:
   preparar_os.py --funcionarios "nome"                           (id + nome do colaborador, para o --colaborador)
   preparar_os.py --abrir --designacao ... --chamado ... --motivo ... --colaborador 184 [--gravar]
         simula (mostra o que seria gravado); com --gravar abre a OS e imprime "ID DA OS: N" (ID vem só da resposta do IXC)
+  preparar_os.py --abrir ... --ignorar-os 76473                  (só se o humano pedir: não conta essa OS aberta como duplicada)
   preparar_os.py --executar-os 76388 [--mensagem "..."] [--colaborador 184] [--gravar]
         Ações > Executar na OS (padrão da mensagem: "Acionado parceiro via WhatsApp"); simula sem --gravar
 Opções: --json (saída em JSON)
@@ -194,7 +195,7 @@ def _endereco_bate(os_: dict, ct: dict) -> bool:
     return True
 
 
-def preparar(ixc: Ixc, designacao: str, chamado: str, motivo: str) -> dict:
+def preparar(ixc: Ixc, designacao: str, chamado: str, motivo: str, ignorar_os: tuple = ()) -> dict:
     designacao = designacao.strip()
     if not designacao:
         raise ErroIxc("informe a designação")
@@ -205,7 +206,8 @@ def preparar(ixc: Ixc, designacao: str, chamado: str, motivo: str) -> dict:
     if len(contratos) != 1:
         lista = ", ".join(f"OS {r.get('id')} (contrato {contrato_da_os(r) or '?'})" for r in achadas[:8])
         raise ErroIxc(f"PARAR: as OS com essa designação não apontam para um único contrato ({lista}). O humano decide.")
-    abertas = [r for r in achadas if r.get("status") != "F"]
+    ignorar = {str(i).strip() for i in ignorar_os}
+    abertas = [r for r in achadas if r.get("status") != "F" and str(r.get("id")) not in ignorar]
     finalizadas = [r for r in achadas if r.get("status") == "F"]
     modelo = finalizadas[0] if finalizadas else achadas[0]  # a mais recente finalizada (o IXC devolve da mais nova para a mais antiga)
     contrato_id = contratos.pop()
@@ -232,6 +234,9 @@ def preparar(ixc: Ixc, designacao: str, chamado: str, motivo: str) -> dict:
     if norm(designacao) not in norm(ct.get("descricao_aux_plano_venda")):
         avisos.append("a designação não aparece na descrição auxiliar do contrato: confira se é o contrato certo")
     notas = []
+    ignoradas = [str(r.get("id")) for r in achadas if r.get("status") != "F" and str(r.get("id")) in ignorar]
+    if ignoradas:
+        notas.append("por pedido do humano, estou ignorando na checagem de duplicata a OS aberta " + ", ".join(ignoradas))
     if str(modelo.get("id_cidade") or "") != str(ct.get("cidade") or ""):
         notas.append(f"a cidade da OS base (id {modelo.get('id_cidade')}) difere da cidade do contrato (id {ct.get('cidade')}): confira antes de gravar")
     for campo in ("bairro", "cep"):
@@ -397,8 +402,8 @@ def corpo_abertura(ixc: Ixc, p: dict, colaborador_id: str) -> dict:
     return corpo
 
 
-def abrir_os(ixc: Ixc, designacao: str, chamado: str, motivo: str, colaborador: str, gravar: bool = False) -> str:
-    p = preparar(ixc, designacao, chamado, motivo)
+def abrir_os(ixc: Ixc, designacao: str, chamado: str, motivo: str, colaborador: str, gravar: bool = False, ignorar_os: tuple = ()) -> str:
+    p = preparar(ixc, designacao, chamado, motivo, ignorar_os)
     if p["avisos"]:
         raise ErroIxc("PARAR: não vou abrir a OS com pendências:\n" + "\n".join(f"• {a}" for a in p["avisos"]))
     cid, nome = achar_colaborador(ixc, colaborador)
@@ -491,6 +496,7 @@ def principal(argv=None) -> int:
     ap.add_argument("--executar-os", metavar="OS", help="Ações > Executar na OS (simulação, a menos que use --gravar)")
     ap.add_argument("--mensagem", default=MSG_EXECUTAR)
     ap.add_argument("--colaborador", default="", help="id do colaborador responsável (veja --funcionarios)")
+    ap.add_argument("--ignorar-os", action="append", default=[], metavar="OS", help="com --abrir: não conta esta OS aberta (número) como duplicada; só se o humano pedir")
     ap.add_argument("--gravar", action="store_true", help="grava de verdade no IXC (só depois do OK do humano)")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
@@ -504,7 +510,7 @@ def principal(argv=None) -> int:
             print(executar_os(ixc, a.executar_os, a.mensagem, a.colaborador, a.gravar))
             return 0
         if a.abrir:
-            print(abrir_os(ixc, a.designacao, a.chamado, a.motivo, a.colaborador, a.gravar))
+            print(abrir_os(ixc, a.designacao, a.chamado, a.motivo, a.colaborador, a.gravar, tuple(a.ignorar_os)))
             return 0
         if a.comparar:
             print(comparar(ixc, *a.comparar, iguais_valores=a.mostrar_iguais))

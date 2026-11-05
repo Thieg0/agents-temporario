@@ -31,7 +31,7 @@ Se faltar algum, pergunte só o que falta. Não invente.
 
 ## 4. Simular e pedir o OK
 date; python3 /opt/data/preparar_os.py --abrir --designacao "<designação>" --chamado "<chamado interno>" --motivo "<motivo>" --colaborador <id>
-Mostre a saída EXATAMENTE como veio e pergunte: "Posso abrir esta OS no IXC?". Se vier "PARAR" ou pendências (por exemplo "JÁ EXISTE OS ABERTA"), mostre e pare: não grave.
+Mostre a saída EXATAMENTE como veio e pergunte: "Posso abrir esta OS no IXC?". Se vier "PARAR" ou pendências (por exemplo "JÁ EXISTE OS ABERTA"), mostre e pare: não grave. EXCEÇÃO: se o colaborador disser claramente que quer abrir outra OS mesmo com a aberta existente, e citar o número dela, repita o comando acrescentando `--ignorar-os <número>` (só desse número) e mostre a nota que o script imprimir. Nunca use essa opção por conta própria.
 
 ## 5. Abrir de verdade (só com OK)
 Rode o MESMO comando (com `date;` no começo) e --gravar no fim. Mostre, bem destacado, a linha que o script imprimir:

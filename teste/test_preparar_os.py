@@ -413,3 +413,27 @@ def test_escolhe_a_os_cujo_endereco_bate_com_o_contrato_e_nao_a_mais_recente(mon
 def test_sem_nota_quando_endereco_bate_com_o_contrato(monkeypatch, capsys):
     cod, out, _ = rodar(monkeypatch, capsys, Fake([os_(75811)]), ABRIR)
     assert "Notas" not in out
+
+
+def test_ignorar_os_deixa_abrir_mesmo_com_a_aberta_citada(monkeypatch, capsys):
+    aberta = os_(76473)
+    aberta["status"] = "EX"
+    f = Fake([aberta, os_(75811)])
+    cod, out, _ = rodar(monkeypatch, capsys, f, ABRIR + ["--ignorar-os", "76473"])
+    assert cod == 0 and "SIMULAÇÃO" in out and "ignorando" in out and "76473" in out and f.escritas == []
+
+
+def test_ignorar_os_so_vale_para_o_numero_citado(monkeypatch, capsys):
+    a1, a2 = os_(76473), os_(76500)
+    a1["status"], a2["status"] = "EX", "A"
+    f = Fake([a2, a1, os_(75811)])
+    cod, _, err = rodar(monkeypatch, capsys, f, ABRIR + ["--ignorar-os", "76473", "--gravar"])
+    assert cod == 1 and "JÁ EXISTE OS ABERTA" in err and "76500" in err and f.escritas == []
+
+
+def test_sem_ignorar_continua_bloqueando(monkeypatch, capsys):
+    aberta = os_(76473)
+    aberta["status"] = "EX"
+    f = Fake([aberta, os_(75811)])
+    cod, _, err = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
+    assert cod == 1 and "JÁ EXISTE OS ABERTA" in err and f.escritas == []
