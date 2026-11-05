@@ -19,9 +19,10 @@ def os_(i, contrato="8054", msg=None, cliente="150"):
 
 
 class Fake:
-    def __init__(self, oss, contrato=None, erro=False, sem_id=False):
+    def __init__(self, oss, contrato=None, erro=False, sem_id=False, sem_cliente=False):
         self.oss, self.pedidos, self.erro, self.sem_id = oss, [], erro, sem_id
         self.escritas = []
+        self.sem_cliente = sem_cliente
         self.contrato = {"id": "8054", "id_cliente": "150", "contrato": CONTRATO, "status": "A",
                          "descricao_aux_plano_venda": f"OI: TAF 5043307 WT: {DES}"} if contrato is None else contrato
         f = self
@@ -57,6 +58,8 @@ class Fake:
                     return self._r(200, {"total": str(len(regs)), "registros": regs})
                 if self.path.endswith("/cliente_contrato"):
                     return self._r(200, {"total": "1", "registros": [f.contrato] if f.contrato else []})
+                if self.path.endswith("/cliente") and f.sem_cliente:
+                    return self._r(200, {"type": "error", "message": "Você não tem permissão para acessar o recurso cliente"})
                 if self.path.endswith("/cliente"):
                     return self._r(200, {"total": "1", "registros": [{"id": "150", "bairro": "ASA NORTE", "complemento": "TERREO SECRETO", "cep": "70000-000", "cidade": "5564", "endereco": "Rua Secreta", "numero": "9", "fone_celular": "71988887777"}]})
                 if self.path.endswith("/funcionarios"):
@@ -358,3 +361,32 @@ def test_so_o_gravar_escreve(monkeypatch, capsys):
     f = Fake([os_noc()])
     rodar(monkeypatch, capsys, f, ["--executar-os", "90001", "--colaborador", "184"])
     assert f.escritas == []
+
+
+def os_teste_noc(i=76196):
+    return {"id": str(i), "status": "F", "setor": "14", "id_assunto": "55", "id_cliente": "150", "id_contrato_kit": "8054",
+            "bairro": "ASA NORTE OS", "complemento": "TERREO OS", "cep": "70000-111", "endereco": "", "id_cidade": "5564",
+            "mensagem": f"Designação / Vlan: {DES}\nCliente Final: Video Policia -SEA"}
+
+
+def test_sem_permissao_em_cliente_copia_endereco_da_ultima_os_do_noc(monkeypatch, capsys):
+    f = Fake([os_(75811), os_teste_noc()], sem_cliente=True)
+    cod, out, _ = rodar(monkeypatch, capsys, f, ABRIR)
+    assert cod == 0 and "SIMULAÇÃO" in out and "OS 76196" in out and "não lê o cadastro de clientes" in out
+    for proibido in ("ASA NORTE OS", "TERREO OS", "70000-111", "Rua Secreta"):
+        assert proibido not in out
+    assert f.escritas == []
+
+
+def test_sem_permissao_em_cliente_grava_com_endereco_da_os(monkeypatch, capsys):
+    f = Fake([os_(75811), os_teste_noc()], sem_cliente=True)
+    cod, out, _ = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
+    assert cod == 0 and "🔔 ID DA OS: 90001" in out
+    c = f.escritas[0][1]
+    assert c["bairro"] == "ASA NORTE OS" and c["cep"] == "70000-111" and c["id_cidade"] == "5564"
+
+
+def test_sem_permissao_em_cliente_e_sem_os_anterior_para(monkeypatch, capsys):
+    f = Fake([os_(75811)], sem_cliente=True)
+    cod, _, err = rodar(monkeypatch, capsys, f, ABRIR + ["--gravar"])
+    assert cod == 1 and "permissão para ler Clientes" in err and f.escritas == []

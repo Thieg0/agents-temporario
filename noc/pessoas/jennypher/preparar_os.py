@@ -322,6 +322,19 @@ def achar_colaborador(ixc: Ixc, colaborador: str) -> tuple[str, str]:
     return cid, str(regs[0].get("funcionario") or "").strip()
 
 
+def _endereco_da_ultima_os(ixc: Ixc, cliente_id: str) -> tuple[dict, str]:
+    """Plano B quando o token não lê o cadastro de clientes: usa o endereço da OS mais recente do mesmo cliente no NOC."""
+    for pagina in (1, 2, 3):
+        regs, _ = ixc.listar("su_oss_chamado", "id_cliente", cliente_id, page=pagina, rp=30, id_desc=True)
+        for r in regs:
+            if str(r.get("setor") or r.get("id_setor") or "") == SETOR_NOC and str(r.get("id_assunto")) == ASSUNTO_GERAL \
+                    and any(str(r.get(k) or "").strip() for k in ("bairro", "endereco", "cep")):
+                return r, f"OS {r.get('id')} (o token não lê o cadastro de clientes)"
+        if len(regs) < 30:
+            break
+    raise ErroIxc("PARAR: o token não tem permissão para ler Clientes e não achei uma OS anterior deste cliente no NOC para copiar o endereço. Peça ao administrador do IXC para liberar a leitura de Clientes no token.")
+
+
 def corpo_abertura(ixc: Ixc, p: dict, colaborador_id: str) -> dict:
     corpo = {
         "tipo": "C",
@@ -338,16 +351,23 @@ def corpo_abertura(ixc: Ixc, p: dict, colaborador_id: str) -> dict:
         "mensagem": p["descricao"],
         "data_abertura": agora_br(),
     }
-    cls, _ = ixc.listar("cliente", "id", p["cliente"], rp=1)
-    cls = [c for c in cls if str(c.get("id")) == p["cliente"]]
-    if not cls:
-        raise ErroIxc(f"PARAR: não achei o cliente {p['cliente']} no IXC")
-    cl = cls[0]
+    try:
+        cls, _ = ixc.listar("cliente", "id", p["cliente"], rp=1)
+        cls = [c for c in cls if str(c.get("id")) == p["cliente"]]
+        if not cls:
+            raise ErroIxc(f"PARAR: não achei o cliente {p['cliente']} no IXC")
+        cl, origem = cls[0], "cadastro do cliente"
+    except ErroIxc as e:
+        if "permiss" not in norm(str(e)).replace("ã", "a").replace("ç", "c"):
+            raise
+        cl, origem = _endereco_da_ultima_os(ixc, p["cliente"])
     for k in CAMPOS_ENDERECO:
         if str(cl.get(k) or "").strip():
             corpo[k] = str(cl[k]).strip()
-    if str(cl.get("cidade") or "").strip() not in ("", "0"):
-        corpo["id_cidade"] = str(cl["cidade"]).strip()
+    cidade = str(cl.get("cidade") or cl.get("id_cidade") or "").strip()
+    if cidade not in ("", "0"):
+        corpo["id_cidade"] = cidade
+    ixc.origem_endereco = origem
     return corpo
 
 
@@ -358,9 +378,9 @@ def abrir_os(ixc: Ixc, designacao: str, chamado: str, motivo: str, colaborador: 
     cid, nome = achar_colaborador(ixc, colaborador)
     corpo = corpo_abertura(ixc, p, cid)
     visivel = {k: v for k, v in corpo.items() if k not in CAMPOS_ENDERECO and k != "id_cidade"}
-    ends = [k for k in CAMPOS_ENDERECO if k in corpo]
+    ends = [k for k in CAMPOS_ENDERECO + ("id_cidade",) if k in corpo]
     resumo = [f"Colaborador responsável: id {cid} - {nome}", f"Contrato: {p['contrato_nome']}", "Campos: " + ", ".join(f"{k}={v!r}" for k, v in visivel.items() if k not in ("mensagem",)),
-              f"Endereço (do cadastro do cliente, não exibido): {', '.join(ends) or 'nenhum campo preenchido'}", "Descrição:", p["descricao"]]
+              f"Endereço (copiado de: {getattr(ixc, 'origem_endereco', 'cadastro do cliente')}; valores não exibidos): {', '.join(ends) or 'nenhum campo preenchido'}", "Descrição:", p["descricao"]]
     if not gravar:
         return "\n".join(["📝 SIMULAÇÃO: nada foi gravado no IXC. Para abrir de verdade, rode de novo com --gravar (só depois do OK do humano)."] + resumo)
     resp = ixc.enviar("su_oss_chamado", corpo)
@@ -431,7 +451,7 @@ def funcionarios(ixc: Ixc, nome: str) -> str:
 
 
 def principal(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="NOC: prepara a abertura de OS (somente leitura)")
+    ap = argparse.ArgumentParser(description="NOC: prepara, abre e executa OS no IXC (simula por padrão; grava só com --gravar)")
     ap.add_argument("--designacao", default="")
     ap.add_argument("--comparar", nargs=2, metavar=("OS_A", "OS_B"))
     ap.add_argument("--mostrar-iguais", action="store_true", help="com --comparar: mostra também os valores curtos dos campos iguais")
