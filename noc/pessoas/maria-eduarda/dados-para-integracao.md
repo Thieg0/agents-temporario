@@ -1,6 +1,6 @@
 # Dados para integração: Maria Eduarda (NOC)
 
-Token Mangaba: 
+Token Mangaba: sk-sudohhyjyeq2xjoi8j0vr5abyqiitrcnn14l8mpvigfo87tt 
 
 Preencha os campos em branco durante a instalação. **Nunca escreva token, senha ou chave de API neste arquivo.**
 
