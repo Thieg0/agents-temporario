@@ -74,15 +74,24 @@ Rode: python3 /opt/data/preparar_os.py --abrir --designacao "SDR TAF 83108054" -
 ~~~
 Esperado: "SIMULAÇÃO: nada foi gravado", colaborador `id 101 - Marina Silva Santos`, contrato 8054, assunto 55, filial 2, setor 14, prioridade N.
 
-## Passo 5: primeiro uso real (com o Thiego olhando o IXC)
-O primeiro teste com gravação é só com um chamado de TESTE e com o Thiego conferindo a OS na tela do IXC (o script nunca apaga: a OS de teste é fechada pela tela).
+## Passo 5: deixar pronto para o uso diário
+O fluxo real já foi validado no IXC pelo Thiego (OS aberta e executada com sucesso). Aqui não se grava nada: só se confirma que a skill está ativa e que o agente faz as perguntas na ordem certa.
+
+### Prompt 5.1: ativar
 ~~~
 Responda sempre em português do Brasil.
 
-Siga a skill abrir-os-noc. Quem abre sou eu, Marina (id 101). Chamado de TESTE: designação SDR TAF 83108054, chamado interno OEMP-TESTE, motivo Inoperante. Pare na simulação e peça meu OK. Só depois do meu "pode abrir" use --gravar.
+A skill abrir-os-noc passa a valer para todo pedido meu de criar OS. Quando eu colar os dados de um chamado e escrever "crie essa O.S", "cria a OS", "abre a OS", "gera a OS" ou qualquer variação, siga a skill abrir-os-noc, com Marina (id 101) como responsável: simule, mostre a saída, peça meu OK, só então grave, mostre o 🔔 ID DA OS, pergunte qual é o parceiro e depois se já acionou. Confirme em uma linha.
 ~~~
-Depois, para testar o Executar, escreva ao agente: `Já acionei o parceiro`. Conferir na tela do IXC que a OS aparece como executada com a mensagem "Acionado parceiro via WhatsApp".
+
+### Prompt 5.2: ensaio completo, sem gravar
+~~~
+Responda sempre em português do Brasil.
+
+Isto é uma SIMULAÇÃO, não grave nada. Crie essa O.S: designação SDR TAF 83108054, chamado interno OEMP-TESTE, motivo Inoperante.
+~~~
+Esperado: o agente roda a simulação e mostra a saída, pergunta "Qual é o parceiro desta vez?"; responda `Saturno` e ele pergunta "Já acionou o parceiro?"; responda `sim` e ele deve dizer que nada foi gravado (sem ID de OS). Se o agente tentar gravar ou inventar um ID, escreva ao Thiego.
 
 ## Depois
-- Uso diário: colar o chamado do cliente no chat e escrever `Siga a skill abrir-os-noc`.
+- Uso diário: colar os dados do chamado no chat e escrever `Crie essa O.S` (ou variação).
 - Se o `--help` falhar por versão do Python (menor que 3.9), avisar o Thiego.

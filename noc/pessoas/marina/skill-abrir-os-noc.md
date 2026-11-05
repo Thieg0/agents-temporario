@@ -1,6 +1,6 @@
 ---
 name: abrir-os-noc
-description: Abre no IXC a OS de falha de circuito (assunto Geral) quando o colaborador do NOC colar um chamado (OEMP, e-mail ou Opa) e pedir para abrir a OS, devolve o ID da OS e depois registra "Executar" quando o parceiro for acionado. Use sempre que ele disser "abre a OS", "abrir OS", "abre o chamado" ou colar o texto de um chamado de cliente com designação.
+description: Abre no IXC a OS de falha de circuito (assunto Geral) quando o colaborador do NOC colar um chamado (OEMP, e-mail ou Opa) e pedir para abrir a OS, devolve o ID da OS e depois registra "Executar" quando o parceiro for acionado. Use sempre que o colaborador colar os dados de um chamado (designação) e pedir para criar, abrir, gerar ou registrar a OS, em qualquer variação: "crie essa O.S", "cria a OS", "abre a OS", "abrir OS", "gera a OS", "abre o chamado".
 ---
 
 # Abertura de OS no NOC (versão 2: o script grava)
@@ -50,5 +50,8 @@ Quando o colaborador confirmar que acionou, rode (a confirmação dele é o OK):
 date; python3 /opt/data/preparar_os.py --executar-os <ID> --colaborador <id> --gravar
 (a mensagem padrão é "Acionado parceiro via WhatsApp"). Mostre a saída. Se o script recusar ("PARAR") ou não confirmar a execução, não tente de outro jeito: peça ao colaborador para executar na tela do IXC. Encerre perguntando se há outro chamado.
 
-## 8. Fora desta versão
+## 8. Modo simulação (teste)
+Se o colaborador disser que é teste ou simulação, faça os passos 3 e 4 normalmente (só simulação, nunca --gravar) e depois SIGA a conversa como no fluxo real: pergunte "Qual é o parceiro desta vez?" e, depois da resposta, "Já acionou o parceiro?". Quando ele responder que sim, NÃO rode nada: diga que, no uso real, aqui o script registraria Ações → Executar, e que nada foi gravado no IXC. Não invente ID de OS na simulação.
+
+## 9. Fora desta versão
 Registrar andamentos e encerrar OS ainda não estão automatizados.
