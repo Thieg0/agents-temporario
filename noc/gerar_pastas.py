@@ -27,7 +27,6 @@ PESSOAS = [  # (pasta, nome completo no IXC, primeiro nome, id do colaborador no
     ("joao-vitor", "João Vítor Andrade De Carvalho", "João Vítor", 178),
     ("julio", "Julio Cesar", "Julio", 14),
 ]
-ARQUIVOS_COPIADOS = ("preparar_os.py", "skill-abrir-os-noc.md")
 
 MENSAGEM_IXC_WORK = """Responda sempre em português do Brasil.
 
@@ -76,7 +75,7 @@ MODELO_ROTEIRO = """# Roteiro de instalação: {nome} (NOC)
 
 Colaborador no IXC: **id {id}** ({completo}).
 Faça na ordem, um passo por vez, e só passe ao próximo quando o anterior funcionar.
-Arquivos desta pasta: `preparar_os.py` e `skill-abrir-os-noc.md` (usados no Passo 4). Os textos do agente (descrição, objetivo, personalidade) estão em `../../descricao.txt`, `../../objetivo.txt` e `../../personalidade.txt`.
+Arquivos desta pasta: `preparar_os.py` e `skill-abrir-os-noc.md` (a skill já traz o colaborador padrão de {nome}; usados no Passo 4). Os textos do agente (descrição, objetivo, personalidade) estão em `../../descricao.txt`, `../../objetivo.txt` e `../../personalidade.txt`.
 Nunca escreva token em arquivo do repositório: ele vai só pelo chat privado do agente, uma vez.
 
 ## Passo 0: criar o agente na plataforma Mangaba
@@ -117,7 +116,7 @@ Teste (somente leitura): `Use a skill ixc-work e me mostre o contrato 8054 (só 
 Esperado: dados do contrato 8054 da Oi. Se disser que não tem permissão, avisar o Thiego (o token pode estar sem a permissão necessária no IXC).
 
 ## Passo 4: skill abrir-os-noc (abrir a OS e executar)
-Anexe `preparar_os.py` e `skill-abrir-os-noc.md` (desta pasta) no chat do agente. Um prompt por vez.
+Anexe `preparar_os.py` e `skill-abrir-os-noc.md` (os desta pasta, não os da pasta `noc`) no chat do agente. Um prompt por vez.
 
 ### Prompt 4.1: instalar
 ~~~
@@ -161,6 +160,15 @@ Depois, para testar o Executar, escreva ao agente: `Já acionei o parceiro`. Con
 """
 
 
+def skill_da_pessoa(p: tuple) -> str:
+    """A skill é a mesma para todos; só ganha a linha com o colaborador padrão da pessoa, logo depois do título."""
+    base = (AQUI / "skill-abrir-os-noc.md").read_text(encoding="utf-8")
+    linha = f"\n**Colaborador padrão desta pessoa: {p[2]} (id {p[3]}, {p[1]}).** Use este id como responsável sem perguntar.\n"
+    marca = "# Abertura de OS no NOC (versão 2: o script grava)\n"
+    assert marca in base
+    return base.replace(marca, marca + linha, 1)
+
+
 def gerar_roteiro(p: tuple) -> str:
     _, completo, nome, cid = p
     return MODELO_ROTEIRO.format(nome=nome, id=cid, completo=completo, ixc_work=MENSAGEM_IXC_WORK)
@@ -171,8 +179,8 @@ def esperado() -> dict[Path, bytes]:
     for p in PESSOAS:
         pasta = AQUI / "pessoas" / p[0]
         saida[pasta / "prompts.md"] = gerar_roteiro(p).encode("utf-8")
-        for nome in ARQUIVOS_COPIADOS:
-            saida[pasta / nome] = (AQUI / nome).read_bytes()
+        saida[pasta / "preparar_os.py"] = (AQUI / "preparar_os.py").read_bytes()
+        saida[pasta / "skill-abrir-os-noc.md"] = skill_da_pessoa(p).encode("utf-8")
     return saida
 
 

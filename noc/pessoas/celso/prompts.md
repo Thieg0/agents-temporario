@@ -2,7 +2,7 @@
 
 Colaborador no IXC: **id 179** (Celso Emanuel Berlink Pereira).
 Faça na ordem, um passo por vez, e só passe ao próximo quando o anterior funcionar.
-Arquivos desta pasta: `preparar_os.py` e `skill-abrir-os-noc.md` (usados no Passo 4). Os textos do agente (descrição, objetivo, personalidade) estão em `../../descricao.txt`, `../../objetivo.txt` e `../../personalidade.txt`.
+Arquivos desta pasta: `preparar_os.py` e `skill-abrir-os-noc.md` (a skill já traz o colaborador padrão de Celso; usados no Passo 4). Os textos do agente (descrição, objetivo, personalidade) estão em `../../descricao.txt`, `../../objetivo.txt` e `../../personalidade.txt`.
 Nunca escreva token em arquivo do repositório: ele vai só pelo chat privado do agente, uma vez.
 
 ## Passo 0: criar o agente na plataforma Mangaba
@@ -84,7 +84,7 @@ Teste (somente leitura): `Use a skill ixc-work e me mostre o contrato 8054 (só 
 Esperado: dados do contrato 8054 da Oi. Se disser que não tem permissão, avisar o Thiego (o token pode estar sem a permissão necessária no IXC).
 
 ## Passo 4: skill abrir-os-noc (abrir a OS e executar)
-Anexe `preparar_os.py` e `skill-abrir-os-noc.md` (desta pasta) no chat do agente. Um prompt por vez.
+Anexe `preparar_os.py` e `skill-abrir-os-noc.md` (os desta pasta, não os da pasta `noc`) no chat do agente. Um prompt por vez.
 
 ### Prompt 4.1: instalar
 ~~~

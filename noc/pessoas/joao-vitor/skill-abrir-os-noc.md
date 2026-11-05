@@ -1,9 +1,11 @@
 ---
 name: abrir-os-noc
-description: Abre no IXC a OS de falha de circuito (assunto Geral) a partir do chamado colado pelo NOC, devolve o ID da OS e depois registra "Executar" quando o parceiro for acionado.
+description: Abre no IXC a OS de falha de circuito (assunto Geral) quando o colaborador do NOC colar um chamado (OEMP, e-mail ou Opa) e pedir para abrir a OS, devolve o ID da OS e depois registra "Executar" quando o parceiro for acionado. Use sempre que ele disser "abre a OS", "abrir OS", "abre o chamado" ou colar o texto de um chamado de cliente com designação.
 ---
 
 # Abertura de OS no NOC (versão 2: o script grava)
+
+**Colaborador padrão desta pessoa: João Vítor (id 178, João Vítor Andrade De Carvalho).** Use este id como responsável sem perguntar.
 
 Arquivo de apoio: /opt/data/preparar_os.py (não altere). O script consulta e grava no IXC sozinho. Por padrão ele só SIMULA; só grava com --gravar.
 
@@ -18,7 +20,7 @@ Arquivo de apoio: /opt/data/preparar_os.py (não altere). O script consulta e gr
 8. Nunca grave no IXC por outro caminho (outra ferramenta, outro script, PUT, PATCH ou api_integracao) neste fluxo: só o preparar_os.py, com --gravar e só depois do OK.
 
 ## 2. Quem está abrindo
-Pergunte o nome de quem está abrindo a OS (será o "Colaborador responsável"). Ids no IXC:
+O "Colaborador responsável" é quem está abrindo a OS. Se este arquivo trouxer a linha "Colaborador padrão desta pessoa", use-a sem perguntar. Se não trouxer, pergunte o nome uma vez e lembre dele na conversa. Ids no IXC:
 Celso 179, Daiana 145, Eliseu 120, Jennypher 184, Maria Eduarda 148, Fernando 71, Marina 101, Rafael 25, Raissa 114, João Vítor 178, Julio 14.
 Se o nome não estiver na lista: python3 /opt/data/preparar_os.py --funcionarios "nome", e peça ao colaborador para confirmar o id.
 
@@ -27,7 +29,7 @@ O colaborador cola o texto do chamado (OEMP, e-mail ou Opa). Dele, tire SOMENTE:
 - **designação** (ex.: SDR TAF 83108054);
 - **chamado interno** (OEMP-xxxxx, ou a referência do e-mail ou do Opa);
 - **motivo** exatamente como o cliente abriu (ex.: Inoperante).
-Se faltar algum, pergunte só o que falta. Não invente.
+O texto vem cru e pode ser bagunçado (assinatura, cabeçalho, várias linhas). Copie a designação exatamente como aparece, sem corrigir. Se houver mais de uma designação no texto, ou nenhuma que pareça uma designação, pergunte qual usar em vez de escolher. Se faltar algum dos três, pergunte só o que falta. Não invente.
 
 ## 4. Simular e pedir o OK
 date; python3 /opt/data/preparar_os.py --abrir --designacao "<designação>" --chamado "<chamado interno>" --motivo "<motivo>" --colaborador <id>
@@ -38,7 +40,7 @@ Rode o MESMO comando (com `date;` no começo) e --gravar no fim. Mostre, bem des
 🔔 ID DA OS: <ID>
 → Coloque este número no campo "Protocolo OEMP" do chamado do cliente (se o chamado veio por e-mail ou Opa, pergunte onde informar).
 Se aparecer "⚠️ Conferir no IXC", mostre e peça ao colaborador que confira a OS na tela.
-Guarde o ID para o passo 7.
+Guarde o ID para o passo 7. Se a conversa for reiniciada (/new) antes do passo 7, peça ao colaborador o número da OS.
 
 ## 6. Acionar o parceiro
 Pergunte: "Qual é o parceiro desta vez?" (nunca suponha). O acionamento é por WhatsApp, feito pelo colaborador; você não envia nada. Se ele pedir, escreva a mensagem para o parceiro com o motivo e a designação. Depois pergunte: "Já acionou o parceiro?" e espere.

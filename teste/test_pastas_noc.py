@@ -18,7 +18,10 @@ def test_uma_pasta_por_pessoa_com_nome_e_id_certos():
         t = (d / "prompts.md").read_text(encoding="utf-8")
         assert f"id {cid}" in t and completo in t and f'--funcionarios "{nome}"' in t and f"--colaborador {cid} " in t
         assert (d / "preparar_os.py").read_bytes() == (RAIZ / "noc" / "preparar_os.py").read_bytes()
-        assert (d / "skill-abrir-os-noc.md").read_bytes() == (RAIZ / "noc" / "skill-abrir-os-noc.md").read_bytes()
+        sk = (d / "skill-abrir-os-noc.md").read_text(encoding="utf-8")
+        base = (RAIZ / "noc" / "skill-abrir-os-noc.md").read_text(encoding="utf-8")
+        assert f"Colaborador padrão desta pessoa: {nome} (id {cid}," in sk
+        assert sk.replace(sk[sk.index("\n**Colaborador padrão"):sk.index("sem perguntar.\n") + len("sem perguntar.\n")], "", 1) == base
 
 
 def test_ids_conferem_com_os_combinados():
