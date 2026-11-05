@@ -14,6 +14,8 @@ Arquivo de apoio: /opt/data/preparar_os.py (não altere). O script consulta e gr
 4. Parar no primeiro erro e mostrar a mensagem do script. Se começar com "PARAR", não tente de outro jeito: o colaborador abre a OS pelo caminho manual e você escalona o caso.
 5. Se o script disser que o IXC não devolveu o ID, NÃO repita o comando: peça ao colaborador para conferir no IXC se a OS foi aberta.
 6. Mostrar só o que o script imprimir. Sem telefone, e-mail ou endereço de cliente.
+7. NUNCA reaproveite, resuma nem reescreva uma saída anterior. A cada pedido, rode o script de novo, num único comando que comece com `date;` (exemplo: `date; python3 /opt/data/preparar_os.py ...`), e cole a saída completa, literal, incluindo a linha da data. Se a hora do `data_abertura` não for a de agora, a saída é velha: não use.
+8. Nunca grave no IXC por outro caminho (outra ferramenta, outro script, PUT, PATCH ou api_integracao) neste fluxo: só o preparar_os.py, com --gravar e só depois do OK.
 
 ## 2. Quem está abrindo
 Pergunte o nome de quem está abrindo a OS (será o "Colaborador responsável"). Ids no IXC:
@@ -28,11 +30,11 @@ O colaborador cola o texto do chamado (OEMP, e-mail ou Opa). Dele, tire SOMENTE:
 Se faltar algum, pergunte só o que falta. Não invente.
 
 ## 4. Simular e pedir o OK
-python3 /opt/data/preparar_os.py --abrir --designacao "<designação>" --chamado "<chamado interno>" --motivo "<motivo>" --colaborador <id>
+date; python3 /opt/data/preparar_os.py --abrir --designacao "<designação>" --chamado "<chamado interno>" --motivo "<motivo>" --colaborador <id>
 Mostre a saída EXATAMENTE como veio e pergunte: "Posso abrir esta OS no IXC?". Se vier "PARAR" ou pendências (por exemplo "JÁ EXISTE OS ABERTA"), mostre e pare: não grave.
 
 ## 5. Abrir de verdade (só com OK)
-Rode o MESMO comando com --gravar no fim. Mostre, bem destacado, a linha que o script imprimir:
+Rode o MESMO comando (com `date;` no começo) e --gravar no fim. Mostre, bem destacado, a linha que o script imprimir:
 🔔 ID DA OS: <ID>
 → Coloque este número no campo "Protocolo OEMP" do chamado do cliente (se o chamado veio por e-mail ou Opa, pergunte onde informar).
 Se aparecer "⚠️ Conferir no IXC", mostre e peça ao colaborador que confira a OS na tela.
@@ -43,7 +45,7 @@ Pergunte: "Qual é o parceiro desta vez?" (nunca suponha). O acionamento é por 
 
 ## 7. Registro no IXC (Ações → Executar)
 Quando o colaborador confirmar que acionou, rode (a confirmação dele é o OK):
-python3 /opt/data/preparar_os.py --executar-os <ID> --colaborador <id> --gravar
+date; python3 /opt/data/preparar_os.py --executar-os <ID> --colaborador <id> --gravar
 (a mensagem padrão é "Acionado parceiro via WhatsApp"). Mostre a saída. Se o script recusar ("PARAR") ou não confirmar a execução, não tente de outro jeito: peça ao colaborador para executar na tela do IXC. Encerre perguntando se há outro chamado.
 
 ## 8. Fora desta versão
