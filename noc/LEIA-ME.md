@@ -27,3 +27,7 @@ Não acessa roteadores, OLTs nem sistemas de monitoramento (Zabbix, Grafana etc.
 
 ## Abertura assistida de OS (versão 2)
 Arquivos: `preparar_os.py`, `skill-abrir-os-noc.md`, `prompts-os.md`. O script acha o contrato pela designação, monta a descrição e **abre a OS no IXC** (assunto 55, setor NOC, filial 2, prioridade Normal, endereço do cadastro do cliente), devolvendo "🔔 ID DA OS". Depois executa a OS (Ações → Executar) com "Acionado parceiro via WhatsApp". Por padrão só SIMULA; grava só com `--gravar`, depois do OK do colaborador. O token vem do cofre do agente e o token de cada pessoa precisa permitir criar OS e executar. `--funcionarios "nome"` mostra o id do colaborador. Primeiro teste real: só com o Thiego olhando o IXC (ver `prompts-os.md`). Testes: `python -m pytest teste -q`.
+
+## Uma pasta por pessoa (`pessoas/`)
+Cada pessoa do NOC tem a sua pasta em `noc/pessoas/<nome>/` com o roteiro completo (`prompts.md`): criar o agente, vincular o e-mail (Google), vincular o IXC (URL e token em duas mensagens), a skill geral `ixc-work` (consulta, cadastro, alteração e ações de O.S., sem DELETE) e a skill `abrir-os-noc`, com o id do colaborador já preenchido. Também traz cópia do `preparar_os.py` e da skill, para anexar no chat.
+As pastas são geradas por `python3 noc/gerar_pastas.py` (a lista de pessoas, os ids e os textos estão nesse arquivo); o teste confere que estão em dia. Ao mudar o `preparar_os.py` ou a skill, rode o gerador de novo e suba tudo junto. Tokens nunca entram no repositório.

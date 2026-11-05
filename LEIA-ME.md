@@ -5,7 +5,7 @@ Cada pasta tem tudo que aquele agente precisa: `os_alerta.py`, a skill e `prompt
 | Pasta | O que recebe |
 |---|---|
 | `socorro` | relatório diário das 8h com os 3 técnicos (visão de gerente) |
-| `noc` | **configuração de agente** do NOC (descrição, objetivo e personalidade; sem chaves) |
+| `noc` | **configuração de agente** do NOC (descrição, objetivo e personalidade; sem chaves), abertura de OS pelo script e `pessoas/` com o roteiro de cada colaborador |
 | `milena` (140), `luiz-felipe` (121), `edson` (161), `carlos-henrique` (118), `raissa` (144), `paloma` (139) | aviso pessoal das 8h, só em dias úteis |
 
 ## Como funciona (mesmo padrão das migrações)
