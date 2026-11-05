@@ -33,6 +33,7 @@ import stat
 import sys
 import urllib.error
 import urllib.request
+import random
 from datetime import datetime, timedelta, timezone
 
 BASE_URL_PADRAO = "https://gestorixc.webfoco.net/webservice/v1"
@@ -234,7 +235,7 @@ def preparar(ixc: Ixc, designacao: str, chamado: str, motivo: str) -> dict:
     if str(modelo.get("id_cidade") or "") != str(ct.get("cidade") or ""):
         notas.append(f"a cidade da OS base (id {modelo.get('id_cidade')}) difere da cidade do contrato (id {ct.get('cidade')}): confira antes de gravar")
     for campo in ("bairro", "cep"):
-        if norm(modelo.get(campo)) != norm(ct.get(campo)) and (modelo.get(campo) or ct.get(campo)):
+        if norm(modelo.get(campo)) and norm(ct.get(campo)) and norm(modelo.get(campo)) != norm(ct.get(campo)):
             notas.append(f"o {campo} da OS base difere do contrato: confira")
     cliente_id = str(modelo.get("id_cliente") or ct.get("id_cliente") or "")
     campos = {
@@ -351,6 +352,12 @@ def achar_colaborador(ixc: Ixc, colaborador: str) -> tuple[str, str]:
     return cid, str(regs[0].get("funcionario") or "").strip()
 
 
+def protocolo_novo() -> str:
+    """Mesmo formato que o IXC gera na tela: aaaammddhhmmss + 6 dígitos (horário de Brasília)."""
+    agora = datetime.now(timezone(timedelta(hours=-3)))
+    return agora.strftime("%Y%m%d%H%M%S") + "".join(random.choice("0123456789") for _ in range(6))
+
+
 def corpo_abertura(ixc: Ixc, p: dict, colaborador_id: str) -> dict:
     corpo = {
         "tipo": "C",
@@ -364,8 +371,18 @@ def corpo_abertura(ixc: Ixc, p: dict, colaborador_id: str) -> dict:
         "origem_endereco": "M",
         "origem_os_aberta": "M",
         "status": "A",
-        "mensagem": p["descricao"],
+        "mensagem": p["descricao"].replace("\n", "\r\n"),  # a tela do IXC grava com \r\n
         "data_abertura": agora_br(),
+        # padrões que a tela preenche sozinha e que a gravação pela API deixa vazios (conferido na OS 76473 contra a 75811)
+        "protocolo": protocolo_novo(),
+        "liberado": "1",
+        "gera_comissao": "S",
+        "impresso": "N",
+        "melhor_horario_agenda": "Q",
+        "origem_cadastro": "P",
+        "origem_endereco_estrutura": "M",
+        "status_assinatura": "A",
+        "status_sla": "N",
     }
     modelo = ler_os(ixc, p["os_modelo"])  # a OS anterior desta designação já traz o endereço que a tela puxa do contrato (com a cidade certa)
     for k in CAMPOS_ENDERECO:
@@ -403,7 +420,7 @@ def abrir_os(ixc: Ixc, designacao: str, chamado: str, motivo: str, colaborador: 
     if not lido:
         return f"🔔 ID DA OS: {novo}\n⚠️ O IXC confirmou a gravação, mas não consegui reler a OS para conferir."
     r = lido[0]
-    dif = [k for k in ("id_cliente", "id_assunto", "id_filial", "id_tecnico", "prioridade", "status", "mensagem") if str(r.get(k, "")).replace("\r\n", "\n").strip() != str(corpo[k]).strip()]
+    dif = [k for k in ("id_cliente", "id_assunto", "id_filial", "id_tecnico", "prioridade", "status", "mensagem", "liberado") if str(r.get(k, "")).replace("\r\n", "\n").strip() != str(corpo[k]).replace("\r\n", "\n").strip()]
     if str(r.get("setor") or r.get("id_setor") or "") != SETOR_NOC:
         dif.append("setor")
     if contrato_da_os(r) != p["contrato"]:

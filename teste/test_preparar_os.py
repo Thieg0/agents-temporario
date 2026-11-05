@@ -273,6 +273,11 @@ def test_abrir_gravar_envia_corpo_certo_e_mostra_id(monkeypatch, capsys):
     assert c["mensagem"].splitlines() == [f"Designação / Vlan: {DES}", "Cliente Final: Video Policia -SEAP-I-078", "Chamado interno: OEMP-42074", "Motivo do chamado: Inoperante"]
     for proibido in ("Rua Secreta", "SALA SECRETA", "Kaikan", "7199999999"):
         assert proibido not in out
+    import re
+    assert re.fullmatch(r"\d{20}", c["protocolo"]) and c["liberado"] == "1" and c["gera_comissao"] == "S" and c["impresso"] == "N"
+    assert c["melhor_horario_agenda"] == "Q" and c["origem_cadastro"] == "P" and c["origem_endereco_estrutura"] == "M"
+    assert c["status_assinatura"] == "A" and c["status_sla"] == "N"
+    assert "\r\n" in c["mensagem"] and c["mensagem"].count("\r\n") == 3
 
 
 def test_abrir_nao_abre_com_os_aberta_duplicada(monkeypatch, capsys):
