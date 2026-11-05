@@ -3,13 +3,13 @@ name: ixc-work
 description: Trabalhar no IXC da Webfoco pela API: consultar clientes, contratos e O.S. (abertas, em execução, por técnico, assunto ou designação), cadastrar cliente, criar contrato, e fazer ações em O.S. (analisar, encaminhar, executar, finalizar). Use quando pedirem qualquer consulta ou cadastro no IXC. Nunca exclui nada.
 ---
 
-# ixc-work (versão 3): guia completo do IXC da Webfoco
+# ixc-work (versão 4): guia completo do IXC da Webfoco
 
 Responda sempre em português do Brasil, curto e direto. Este guia vale para todos os colaboradores. Cada colaborador usa o **próprio token** do IXC (guardado no cofre do agente). As permissões do token definem o que dá para fazer: se o IXC responder "sem permissão", avise o Thiego, não tente outro caminho.
 
 Legenda: ✅ confirmado em teste real na Webfoco · 📖 conforme a documentação/exemplos públicos da API do IXC, ainda não testado na Webfoco (confirme com uma consulta pequena ou um registro de teste na primeira vez).
 
-Documentação oficial (para consulta humana): wikiapiprovedor.ixcsoft.com.br (referência de campos e endpoints), wiki.ixcsoft.com.br (páginas "... - API") e docs.doc-api-provedor.com (exemplos em várias linguagens). O agente não precisa abri-las: tudo que importa está aqui.
+Documentação oficial (para consulta humana): wikiapiprovedor.ixcsoft.com.br (referência de campos e endpoints), wiki.ixcsoft.com.br (páginas "... - API") e docs.doc-api-provedor.com (exemplos em várias linguagens). O agente não precisa abri-las: tudo que importa está aqui (a seção 9 resume as páginas "Recursos da API" da wiki oficial, lidas em 05/11/2026).
 
 ---
 
@@ -250,7 +250,48 @@ Notas:
 - Não despeje JSON nem listas enormes no chat. Não explique o passo a passo técnico a menos que eu pergunte.
 - Se faltar uma informação para consultar ou gravar, faça **uma** pergunta curta.
 
-## 8. O que este guia NÃO cobre (peça ao Thiego)
+## 9. Outros recursos da API oficial do IXC (📖: só da documentação, não testados na Webfoco)
+
+Regra para tudo desta seção: **consultar é livre; qualquer coisa que mude algo (POST/GET de ação) só com o OK da pessoa e, nas marcadas ⛔, só com instrução específica do Thiego.** Nomes de endpoint com número no final (ex.: `radusuarios_25452`) mudam entre versões do IXC: confira com o Thiego antes de usar.
+
+### 9.1 Consultas extras
+- **Cliente por CPF/CNPJ:** `qtype cnpj_cpf` (sem prefixo funciona na doc oficial; com `cliente.cnpj_cpf` também), `oper =`, `query` no formato gravado (com pontuação: `115.895.877-31`). Teste os dois formatos se não achar.
+- **Cliente por telefone:** faça uma consulta por campo e junte: `telefone_celular`, `fone` (residencial), `telefone_comercial`, `whatsapp`, `ramal`. Formato do número como gravado: `(DD) 9XXXX-XXXX`; para busca parcial use `L`.
+- **Contratos por status de acesso:** `cliente_contrato` com filtro em `status_internet` (ex.: `FA` = financeiro em atraso). Na doc é feito com `grid_param`, que **não funciona na Webfoco**: consulte por `qtype cliente_contrato.status_internet`, `oper =`, `query FA`.
+- **Produtos de um contrato:** `vd_contratos_produtos.id_contrato`. Serviços adicionais do contrato: `cliente_contrato_servicos.id_contrato`. Comodatos: `cliente_contrato_comodato`.
+- **Boletos/faturas** (`fn_areceber`): abertos de um cliente = `qtype fn_areceber.id_cliente` + filtrar no arquivo `liberado = S`, `status` diferente de `C` e `R`. Pagos numa data: `qtype fn_areceber.pagamento_data`, `query dd/mm/aaaa`. Use `rp` alto só se necessário; prefira páginas de 30.
+- **Boleto (dados, arquivo, e-mail, SMS)** 📖 via ação `get_boleto` com `boletos` (id da fatura), `juro` e `multa` (S/N), `atualiza_boleto` (S/N) e `tipo_boleto` = `dados` (só consulta), `arquivo` (PDF; `base64` = S), `mail` ou `sms` (**envia ao cliente: só com OK da pessoa**).
+- **Atendimentos (tickets):** tabela `su_ticket` (`protocolo`, `id_cliente`, `su_status`, `status`). Status do atendimento: `T` pendente, `C` aguardando cliente, `EX` execução, `OSAB` OS aberta, `OSEX` OS em execução, `OSAG` OS agendada, `F` finalizado. `su_status`: `N` novo, `P` pendente, `EP` em progresso, `S` solucionado, `C` cancelado. Prioridade: `B` baixa, `M` normal, `A` alta, `C` crítica.
+- **Outras tabelas de leitura:** `cdr` (registros de chamadas VoIP), `df_projeto` (projetos), `vd_pedido_venda` (pedidos de venda), `radpop_ocorrencias` (ocorrências/soluções), `radpop_radio_cliente_fibra` (clientes fibra), `contas` (contas financeiras), `radgrupos` (planos de velocidade), `produtos`.
+- **Viabilidade técnica** (`viabilidade_tecnica`): por endereço (`endereco`, `numero`, `cidade`, `estado`, `cep`) ou por `latitude` e `longitude`.
+- **Sequência de protocolo:** `gerar_protocolo_atendimento` devolve um novo número de protocolo (antes de abrir atendimento; sempre confira que o protocolo não existe).
+
+### 9.2 Ações com efeito (sempre com OK; ⛔ = só com instrução do Thiego)
+- **Atendimento novo** (`POST su_ticket`): obrigatórios `protocolo` (novo, de `gerar_protocolo_atendimento`), `id_cliente`, `origem_endereco` (`C` cliente, `L` login, `CC` contrato, `M` manual), `menssagem` (sim, com esse erro de grafia na API), `su_status`, `status`, `id_ticket_setor`, `prioridade`, `id_ticket_origem` (`I` interna). Cheque duplicidade do protocolo antes.
+- **Interação em atendimento** (`POST su_mensagens`): `id_ticket`, `id_cliente`, `mensagem`, `operador`, `su_status`, `status`, `existe_pendencia_externa`.
+- **Transferir atendimento** (`POST su_transf_atendimento_<n>`): `id_atendimento`, `data_transferencia` (maior que agora), `id_departamento_origem`, `id_departamento_destino`, `id_responsavel_tecnico`.
+- **Inserir produto/plano no contrato** (`POST vd_contratos_produtos`): `tipo` (`I` internet, `T` telefonia, `S` serviços, `SVA`, `TV`), `id_contrato`, `id_plano` (internet/telefonia) ou `id_produto` (serviços/SVA/TV), `qtde`, `valor_unit` (aceita `1.234,56`), `descricao`. ⛔ em contratos ativos (mexe em cobrança).
+- **Desconto/acréscimo no contrato** (`POST cliente_contrato_descontos_servicos`) ⛔.
+- **Lead** (`POST contato`): `nome` obrigatório, `lead = S`, telefones (`fone_celular`, `fone_whatsapp`...), `email`, endereço. Cadastro simples de potencial cliente.
+- **Fornecedor** (`POST fornecedor`): `razao`, `data` (dd/mm/aaaa), `tipo_pessoa` (F/J/E), `ativo`, `cidade` (id) obrigatórios.
+- **Comodato na finalização de O.S.** (`POST su_oss_mov_comodato_wiz_novo`): `id_oss_chamado`, `id_contrato`, `id_produto`, `qtde_saida`, `valor_unitario` etc. Só quando a O.S. exige entregar equipamento; use o modelo de uma movimentação existente.
+- **Processos (workflow)**: `wfl_tarefa` (criar tarefa de processo) e disparar/finalizar tarefa de O.S. com `su_oss_chamado_fechar` usando `id_tarefa_atual`, `id_proxima_tarefa`, `id_proxima_tarefa_aux` ⛔ (só se o Thiego explicar o processo).
+- **Contrato/login (⛔ todos):** ativar contrato (`cliente_contrato_ativar_cliente`), desbloqueio de confiança (`desbloqueio_confianca`), liberar temporariamente (`cliente_contrato_btn_lib_temp_<n>`), liberação de redução de velocidade (`liberacao_reducao_contrato_<n>`), limpar MAC (`radusuarios_<n>` com `get_id`), desconectar login (`desconectar_clientes`, `id` do login), alterar status de acesso. Afetam o cliente final na hora (internet cai ou volta): nunca por iniciativa do agente.
+- **Receber título / baixa** (`fn_areceber_recebimentos_baixas_novo`) ⛔: data em `dd/mm/aaaa` (ISO é recusada). O agente não dá baixa.
+
+### 9.3 Detalhes das ações de O.S. (complemento da seção 6.2)
+- **Finalizar:** o corpo da doc inclui também `id_su_diagnostico` (opcional) e, em processos com tarefas, `id_tarefa_atual`, `id_proxima_tarefa` (use `0` se for a última), `finaliza_processo` (`S` na última tarefa, `N` nas outras). Sem processo, use `finaliza_processo = S`.
+- **Analisar:** campos obrigatórios `id_setor`, `id_chamado`, `status = AN`, `id_tecnico`, `data_inicio` e `data_final`.
+- **Encaminhar (alterar setor):** `id_chamado`, `id_setor`, `id_tecnico`, `id_assunto`, `mensagem`, `status = EN`. O id do setor está na tabela `empresa_setor`.
+- Datas das ações: `dd/mm/aaaa hh:mm:ss`.
+
+### 9.4 Configuração do usuário da API (para o Thiego/administrador, não para o agente)
+- O token é criado em Configurações do sistema → Usuários → Novo, com **"Permite acesso ao webservice"** marcado; o token aparece ao salvar. As permissões da API são as do usuário.
+- Para o usuário que mexe com O.S., a doc recomenda **remover os filtros "filtrar setor" e "filtrar funcionário"** na aba Parâmetros do usuário: se estiverem ligados, o agente só enxerga as O.S. do setor/funcionário do usuário e as consultas parecem "incompletas".
+- Teste de acesso: abrir `<endereço>/webservice/v1` no navegador.
+- Erros da doc: **404** (nginx) = falta a linha `try_files $uri $uri /webservice/index.php?$query_string;` na configuração do servidor; **401** = token alterado ou usuário deletado; **400** = usou `http://` onde precisa `https://`.
+
+## 10. O que este guia NÃO cobre (peça ao Thiego)
 - Excluir qualquer coisa (proibido).
 - Cliente pessoa física (CPF): valor do tipo de documento ainda não descoberto.
 - Financeiro (boletos, baixas), alterar plano/valor de contrato já ativo, cancelar contrato: não faça sem instrução específica do Thiego.
