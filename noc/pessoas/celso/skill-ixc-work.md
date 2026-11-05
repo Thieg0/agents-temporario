@@ -3,11 +3,13 @@ name: ixc-work
 description: Trabalhar no IXC da Webfoco pela API: consultar clientes, contratos e O.S. (abertas, em execução, por técnico, assunto ou designação), cadastrar cliente, criar contrato, e fazer ações em O.S. (analisar, encaminhar, executar, finalizar). Use quando pedirem qualquer consulta ou cadastro no IXC. Nunca exclui nada.
 ---
 
-# ixc-work (versão 2): guia completo do IXC da Webfoco
+# ixc-work (versão 3): guia completo do IXC da Webfoco
 
 Responda sempre em português do Brasil, curto e direto. Este guia vale para todos os colaboradores. Cada colaborador usa o **próprio token** do IXC (guardado no cofre do agente). As permissões do token definem o que dá para fazer: se o IXC responder "sem permissão", avise o Thiego, não tente outro caminho.
 
-Legenda: ✅ confirmado em teste real na Webfoco · 📖 conforme a documentação da API do IXC (confirme com uma conta de teste na primeira vez).
+Legenda: ✅ confirmado em teste real na Webfoco · 📖 conforme a documentação/exemplos públicos da API do IXC, ainda não testado na Webfoco (confirme com uma consulta pequena ou um registro de teste na primeira vez).
+
+Documentação oficial (para consulta humana): wikiapiprovedor.ixcsoft.com.br (referência de campos e endpoints), wiki.ixcsoft.com.br (páginas "... - API") e docs.doc-api-provedor.com (exemplos em várias linguagens). O agente não precisa abri-las: tudo que importa está aqui.
 
 ---
 
@@ -35,9 +37,11 @@ Legenda: ✅ confirmado em teste real na Webfoco · 📖 conforme a documentaç�
   {"qtype": "cliente_contrato.id", "query": "8054", "oper": "=", "page": "1", "rp": "30", "sortname": "cliente_contrato.id", "sortorder": "desc"}
   ```
   - `qtype` = `<tabela>.<campo>` (sempre com o prefixo da tabela).
-  - `oper`: `=` igual, `L` contém (LIKE), `>`, `<`, `>=`, `<=`, `!=` 📖 (teste um `!=` ou `>=` numa consulta pequena antes de confiar).
+  - `oper`: `=` igual · `!=` diferente · `>` `<` `>=` `<=` · `L` contém (LIKE) · `NL` não contém · `IN` está na lista · `NI` não está na lista · `BE` entre dois valores 📖 (`L` e `=` são os já usados na Webfoco; teste os outros numa consulta pequena antes de confiar).
+  - `sortname` / `sortorder` (`asc` ou `desc`): ordenação, ex.: `su_oss_chamado.id` + `desc` para as mais recentes ✅.
+  - **Só uma condição por consulta.** Filtros combinados (`grid_param`) não funcionam na Webfoco: faça a consulta pelo critério mais restritivo e filtre o resto no arquivo, por script.
   - `page` e `rp` (registros por página): use no máximo 30 por página e vá páginando; a resposta traz `total` e `registros`.
-  - Para escolher os campos da resposta, peça só os necessários (ex.: `cliente_contrato.id`, `cliente_contrato.status`); a resposta volta sem o prefixo. Sem escolher, volta o registro inteiro: **salve em arquivo, nunca mostre inteiro**.
+  - **Não escolha lista de campos na consulta de O.S.** ✅: já aconteceu de `id_assunto` e `data_prazo_limite` voltarem vazios quando se pediu só alguns campos. O jeito seguro é pedir o registro inteiro, **salvar em arquivo** e mostrar só os campos que interessam (por script). Para contratos e clientes, escolher campos funciona, mas se um campo vier vazio, repita sem escolher campos antes de concluir que está vazio.
 - **Leitura por ID na URL NÃO funciona** ✅ (dá "Recurso não está disponível"). Para ler um registro, filtre: `qtype <tabela>.id`, `oper "="`, `query <id>`, `rp 1`, `page 1`.
 - **Não use `grid_param`** ✅ (a versão da Webfoco dá erro).
 - **Cadastrar:** POST na tabela, sem o cabeçalho `ixcsoft`, corpo em JSON ✅.
@@ -52,7 +56,10 @@ Legenda: ✅ confirmado em teste real na Webfoco · 📖 conforme a documentaç�
 |---|---|
 | "Recurso não está disponível" (às vezes com 2 espaços) | Chamada no formato errado, leitura por ID na URL, ou integração não salva. Refaça com filtro. Se persistir em busca com filtro, espere 5 min e tente **uma** vez; depois pare e avise. |
 | "Feche o formulário e tente novamente" | Alguém está com o registro aberto na tela do IXC. Avise, espere e tente **uma** vez. |
-| 401 / não autorizado | Token recusado. Avise o Thiego. Não peça o token no chat. |
+| 401 "Authorization Required" | Token recusado ou mal formado. Avise o Thiego. Não peça o token no chat. |
+| 404 (página do nginx) | URL errada (falta `/webservice/v1`, ou domínio errado) ou o IXC não está respondendo. Avise; não tente outras URLs. |
+| 400 "Bad Request" | Corpo mal formado (JSON inválido, campo com tipo errado). Revise o corpo, não repita às cegas. |
+| IP não permitido | Em alguns IXC o acesso à API é liberado só para certos IPs. Avise o Thiego. |
 | "sem permissão" / acesso negado | O token do colaborador não tem essa permissão. Avise o Thiego (quem pede ao administrador do IXC). |
 | "Não é permitido cancelar contratos com status pré-contrato" | O corpo do PUT leva campos de cancelamento/desativação. Tire-os (ver seção 5). |
 | Resposta de POST sem `id` | Não repita. Confira por busca, avise. |
@@ -82,8 +89,17 @@ Status da O.S. ✅: `A` aberta · `AN` análise · `EN` encaminhada · `AS` assu
 ### funcionarios (colaboradores)
 `id`, `funcionario` (nome). Filtre por nome com `L`. O `id` é o que vai em `id_tecnico`. Ids da equipe NOC: Celso 179, Daiana 145, Eliseu 120, Jennypher 184, Maria Eduarda 148, Fernando 71, Marina 101, Rafael 25, Raissa 114, João Vítor 178, Julio 14. Se houver mais de um com o mesmo nome (ex.: Daiana 145 e 111, Marina 101 e 100), vale o ativo listado acima.
 
+### fn_areceber (contas a receber / faturas) 📖 — SOMENTE CONSULTA
+`id`, `id_cliente`, `id_contrato`, `valor` (total), `valor_aberto` (em aberto), `data_vencimento` (`aaaa-mm-dd`), `status` (`A` aberta, `R` recebida, `C` cancelada), `liberado` (`S`), `tipo_recebimento` (ex.: Boleto, Pix, Gateway), `pix_txid`. Consultas úteis: por contrato (`fn_areceber.id_contrato` `=`), por cliente (`fn_areceber.id_cliente`), em aberto (`fn_areceber.status` `=` `A`). **Não dê baixa, não altere valores nem vencimentos, não cancele**: baixa de pagamento (`fn_areceber_recebimentos_baixas_novo`) e alterações financeiras só com instrução específica do Thiego. Dados financeiros são sensíveis: mostre só o necessário.
+
+### Status de acesso do contrato (`cliente_contrato.status_internet`) 📖
+`A` ativo · `D` desativado · `CM` bloqueio manual · `CA` bloqueio automático · `FA` financeiro em atraso · `AA` aguardando assinatura. (Não confundir com `status` do contrato.)
+
+### Contatos do cliente 📖
+Na tabela `cliente`: `email`, `telefone_celular`, `whatsapp`, `telefone_comercial`. Sensíveis: só mostre se a pessoa pedir e for necessário.
+
 ### Outras tabelas úteis
-`su_oss_assunto` (assuntos de O.S.: 55 = "Geral"; 278 = pausa), `cidade` (códigos: Maceió = 1695, uf 7), `produtos` (catálogo; o valor que vale é o do contrato, não o do catálogo), `filial` (2 = a filial usada nos contratos e O.S. da Webfoco/NOC).
+`su_oss_assunto` (assuntos de O.S.: 55 = "Geral"; 278 = pausa), `cidade` (códigos: Maceió = 1695, uf 7), `produtos` (catálogo; o valor que vale é o do contrato, não o do catálogo), `filial` (2 = a filial usada nos contratos e O.S. da Webfoco/NOC), `radusuarios` (logins PPPoE/radius do cliente: `id_cliente`, `online` 📖).
 
 ---
 
@@ -125,6 +141,24 @@ Alerta de prazo: O.S. aberta há mais de 48 h (por `data_abertura`), **ignorando
 `qtype funcionarios.funcionario`, `oper L`, `query <nome>`; mostre `id - nome`.
 
 ---
+
+### 4.9 Perguntas frequentes → receita
+| Pedido | Como fazer |
+|---|---|
+| "Mostra o contrato X" | 4.1 |
+| "Quais contratos o cliente Y tem?" | achar o cliente (`cliente.razao` `L`) e depois 4.2 |
+| "O contrato da designação Z existe?" | 4.3 |
+| "Quais O.S. abertas eu tenho?" | 4.5 com `id_tecnico` = meu id |
+| "Quais O.S. estão em execução?" | 4.6 |
+| "O.S. paradas há mais de 48 h?" | 4.5, ordenar por `data_abertura`, ignorar assunto 278 |
+| "Qual o status da O.S. N?" | 4.4 |
+| "Quem é o id do colaborador W?" | 4.8 |
+| "A fatura do contrato X está em aberto?" | `fn_areceber` por `id_contrato`, `status = A` (somente consulta) |
+| "Abre uma O.S. do NOC" | skill `abrir-os-noc` (6.1) |
+| "Cria o cliente / contrato" | 5.1 / 5.2 (com meu OK) |
+| "Finaliza a O.S. N" | 6.2 e 6.3 (com meu OK) |
+
+Sem prazo: o campo de prazo (`data_prazo_limite`) vem zerado nas O.S. da Webfoco ✅. Para atraso, use "dias em aberto" (hoje − `data_abertura`). O assunto vem como número (`id_assunto`): faça uma leitura da tabela `su_oss_assunto`, salve o mapa id→nome em arquivo e traduza.
 
 ## 5. Cadastros (precisam do meu OK; um por vez)
 
