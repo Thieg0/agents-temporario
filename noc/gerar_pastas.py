@@ -9,11 +9,12 @@ Para mudar o texto do roteiro: edite MODELO_ROTEIRO e MENSAGEM_IXC_WORK aqui e r
 
 from __future__ import annotations
 
-import shutil
+import hashlib
 import sys
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
+TEXTOS_AGENTE = ("descricao.txt", "objetivo.txt", "personalidade.txt")  # copiados de noc/ para a pasta de cada pessoa
 PESSOAS = [  # (pasta, nome completo no IXC, primeiro nome, id do colaborador no IXC)
     ("celso", "Celso Emanuel Berlink Pereira", "Celso", 179),
     ("daiana", "Daiana Valquiria Dias Sousa", "Daiana", 145),
@@ -75,11 +76,11 @@ MODELO_ROTEIRO = """# Roteiro de instalação: {nome} (NOC)
 
 Colaborador no IXC: **id {id}** ({completo}).
 Faça na ordem, um passo por vez, e só passe ao próximo quando o anterior funcionar.
-Arquivos desta pasta: `preparar_os.py` e `skill-abrir-os-noc.md` (a skill já traz o colaborador padrão de {nome}; usados no Passo 4). Os textos do agente (descrição, objetivo, personalidade) estão em `../../descricao.txt`, `../../objetivo.txt` e `../../personalidade.txt`.
+Arquivos de instalação desta pasta: `preparar_os.py` e `skill-abrir-os-noc.md` (a skill já traz o colaborador padrão de {nome}; usados no Passo 4). Os textos do agente (`descricao.txt`, `objetivo.txt`, `personalidade.txt`), os dados do cadastro (`dados-para-integracao.md`) e a mensagem da skill geral (`mensagem-skill-ixc-work.md`) também estão nesta pasta.
 Nunca escreva token em arquivo do repositório: ele vai só pelo chat privado do agente, uma vez.
 
 ## Passo 0: criar o agente na plataforma Mangaba
-1. Criar o agente "Assistente NOC" e colar nos campos Descrição, Objetivo e Personalidade o conteúdo dos três arquivos acima.
+1. Criar o agente "Assistente NOC" e colar nos campos Descrição, Objetivo e Personalidade o conteúdo de `descricao.txt`, `objetivo.txt` e `personalidade.txt` (nesta pasta).
 2. Cérebro (provedor, modelo e chave): igual aos demais agentes da Webfoco. A chave é enviada na hora e apagada depois.
 3. Telegram: criar o bot (BotFather) e informar o id do Telegram de {nome}.
 4. Ativar o agente. No Telegram, enviar `/sethome` e depois "apresente-se".
@@ -106,7 +107,7 @@ O token é o do próprio {nome} (gerado no IXC pelo administrador) e é enviado 
 Se o agente disser que a integração não funcionou, tentar a URL errada ou pedir a URL sem `/webservice`: enviar de novo a URL do item 2. Se disser que o token foi recusado: ele pode ter perdido o token no cofre; enviar o token de novo.
 
 ## Passo 3: skill geral do IXC (ixc-work)
-Enviar ao agente a mensagem abaixo, inteira (é um texto só):
+Enviar ao agente a mensagem abaixo, inteira (é um texto só; a mesma está em `mensagem-skill-ixc-work.md`):
 
 ~~~
 {ixc_work}
@@ -169,6 +170,68 @@ def skill_da_pessoa(p: tuple) -> str:
     return base.replace(marca, marca + linha, 1)
 
 
+MODELO_ARQUIVO_IXC_WORK = """# Mensagem para criar a skill ixc-work
+
+Envie ao agente, no chat privado, a mensagem abaixo inteira (é um texto só). Ela cria a skill geral do IXC (consultar, cadastrar, alterar e ações em O.S., sem DELETE).
+
+~~~
+{ixc_work}
+~~~
+"""
+
+MODELO_DADOS = """# Dados para integração: {nome} (NOC)
+
+Preencha os campos em branco durante a instalação. **Nunca escreva token, senha ou chave de API neste arquivo.**
+
+## Pessoa
+- Nome no IXC: {completo}
+- Colaborador no IXC (id do "Colaborador responsável"): **{id}**
+- Agente: Assistente NOC de {nome}
+- Pasta do roteiro: `prompts.md` (nesta pasta)
+
+## IXC
+- URL da API: `https://gestorixc.webfoco.net/webservice/v1`
+- Token: gerado no IXC pelo administrador e enviado só em conversa privada com o agente de {nome}, uma vez, no formato `Token: ID:hash`. A mensagem some do chat (é o esperado).
+- Permissões que o token precisa ter: listar contratos, O.S. e funcionários; **criar O.S.** e **executar O.S.**; nada de excluir. Ler Clientes é opcional.
+- Token gerado em: ____/____/______   Enviado ao agente em: ____/____/______
+- Teste de acesso: `python3 /opt/data/preparar_os.py --funcionarios "{nome}"` deve mostrar `id {id} - {completo}`.
+
+## Google (e-mail, agenda e Drive de arquivos)
+- Conta Google de {nome}: ______________________________
+- Conectada em Integrações > Google Workspace: [ ] sim, em ____/____/______
+- Teste no Telegram: "Quais foram os e-mails que recebi no dia de hoje?": [ ] ok
+
+## Telegram
+- Id do Telegram de {nome}: ______________________
+- Bot (nome e @): ______________________________
+- /sethome feito: [ ] sim
+
+## Plataforma Mangaba
+- Id do agente na plataforma: ______________
+- Cérebro (provedor e modelo): ______________________ (a chave de API é enviada na hora e apagada depois)
+- Descrição, objetivo e personalidade colados (arquivos `descricao.txt`, `objetivo.txt` e `personalidade.txt` desta pasta): [ ] sim
+
+## Skills e arquivos instalados no agente
+- [ ] `ixc-work` (mensagem em `mensagem-skill-ixc-work.md`)
+- [ ] `/opt/data/preparar_os.py` (sha256 começando com `{sha_script}`)
+- [ ] skill `abrir-os-noc` (arquivo `skill-abrir-os-noc.md` desta pasta; já traz {nome} como colaborador padrão)
+- [ ] Simulação testada (`--abrir ... --colaborador {id}`, sem `--gravar`)
+- [ ] Primeiro teste real feito com o Thiego olhando o IXC, em ____/____/______
+
+## Mensagens prontas (copiar e colar no chat do agente, uma por vez)
+1. `Vou te passar o acesso ao IXC. Primeiro vou te mandar a URL da API e depois te mando o meu token.`
+2. `URL: https://gestorixc.webfoco.net/webservice/v1`
+3. `Token: ID:hash` (troque pelo token recebido)
+4. `Agente, você possui acesso ao meu e-mail?` e depois `Já fiz a integração, verifique novamente.`
+"""
+
+
+def gerar_dados(p: tuple) -> str:
+    _, completo, nome, cid = p
+    sha = hashlib.sha256((AQUI / "preparar_os.py").read_bytes()).hexdigest()[:16]
+    return MODELO_DADOS.format(nome=nome, id=cid, completo=completo, sha_script=sha)
+
+
 def gerar_roteiro(p: tuple) -> str:
     _, completo, nome, cid = p
     return MODELO_ROTEIRO.format(nome=nome, id=cid, completo=completo, ixc_work=MENSAGEM_IXC_WORK)
@@ -179,6 +242,10 @@ def esperado() -> dict[Path, bytes]:
     for p in PESSOAS:
         pasta = AQUI / "pessoas" / p[0]
         saida[pasta / "prompts.md"] = gerar_roteiro(p).encode("utf-8")
+        saida[pasta / "dados-para-integracao.md"] = gerar_dados(p).encode("utf-8")
+        saida[pasta / "mensagem-skill-ixc-work.md"] = (MODELO_ARQUIVO_IXC_WORK.format(ixc_work=MENSAGEM_IXC_WORK)).encode("utf-8")
+        for nome in TEXTOS_AGENTE:
+            saida[pasta / nome] = (AQUI / nome).read_bytes()
         saida[pasta / "preparar_os.py"] = (AQUI / "preparar_os.py").read_bytes()
         saida[pasta / "skill-abrir-os-noc.md"] = skill_da_pessoa(p).encode("utf-8")
     return saida

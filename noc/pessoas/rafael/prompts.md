@@ -2,11 +2,11 @@
 
 Colaborador no IXC: **id 25** (Rafael Cardoso de Azevedo).
 Faça na ordem, um passo por vez, e só passe ao próximo quando o anterior funcionar.
-Arquivos desta pasta: `preparar_os.py` e `skill-abrir-os-noc.md` (a skill já traz o colaborador padrão de Rafael; usados no Passo 4). Os textos do agente (descrição, objetivo, personalidade) estão em `../../descricao.txt`, `../../objetivo.txt` e `../../personalidade.txt`.
+Arquivos de instalação desta pasta: `preparar_os.py` e `skill-abrir-os-noc.md` (a skill já traz o colaborador padrão de Rafael; usados no Passo 4). Os textos do agente (`descricao.txt`, `objetivo.txt`, `personalidade.txt`), os dados do cadastro (`dados-para-integracao.md`) e a mensagem da skill geral (`mensagem-skill-ixc-work.md`) também estão nesta pasta.
 Nunca escreva token em arquivo do repositório: ele vai só pelo chat privado do agente, uma vez.
 
 ## Passo 0: criar o agente na plataforma Mangaba
-1. Criar o agente "Assistente NOC" e colar nos campos Descrição, Objetivo e Personalidade o conteúdo dos três arquivos acima.
+1. Criar o agente "Assistente NOC" e colar nos campos Descrição, Objetivo e Personalidade o conteúdo de `descricao.txt`, `objetivo.txt` e `personalidade.txt` (nesta pasta).
 2. Cérebro (provedor, modelo e chave): igual aos demais agentes da Webfoco. A chave é enviada na hora e apagada depois.
 3. Telegram: criar o bot (BotFather) e informar o id do Telegram de Rafael.
 4. Ativar o agente. No Telegram, enviar `/sethome` e depois "apresente-se".
@@ -33,7 +33,7 @@ O token é o do próprio Rafael (gerado no IXC pelo administrador) e é enviado 
 Se o agente disser que a integração não funcionou, tentar a URL errada ou pedir a URL sem `/webservice`: enviar de novo a URL do item 2. Se disser que o token foi recusado: ele pode ter perdido o token no cofre; enviar o token de novo.
 
 ## Passo 3: skill geral do IXC (ixc-work)
-Enviar ao agente a mensagem abaixo, inteira (é um texto só):
+Enviar ao agente a mensagem abaixo, inteira (é um texto só; a mesma está em `mensagem-skill-ixc-work.md`):
 
 ~~~
 Responda sempre em português do Brasil.

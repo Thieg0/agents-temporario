@@ -56,3 +56,23 @@ def test_nenhum_token_no_repositorio():
     padrao = re.compile(r"\b\d{1,4}:[0-9a-f]{24,}\b")
     for f in list((RAIZ / "noc").rglob("*.md")) + list((RAIZ / "noc").rglob("*.txt")) + list((RAIZ / "noc").rglob("*.py")):
         assert not padrao.search(f.read_text(encoding="utf-8")), f
+
+
+def test_cada_pasta_tem_textos_do_agente_dados_e_mensagem_da_skill():
+    for pasta, completo, nome, cid in g.PESSOAS:
+        d = RAIZ / "noc" / "pessoas" / pasta
+        for f in g.TEXTOS_AGENTE:
+            assert (d / f).read_bytes() == (RAIZ / "noc" / f).read_bytes(), (pasta, f)
+        dados = (d / "dados-para-integracao.md").read_text(encoding="utf-8")
+        assert f"**{cid}**" in dados and completo in dados and "Nunca escreva token" in dados
+        assert "https://gestorixc.webfoco.net/webservice/v1" in dados and "criar O.S." in dados
+        sha = __import__("hashlib").sha256((RAIZ / "noc" / "preparar_os.py").read_bytes()).hexdigest()[:16]
+        assert sha in dados
+        msg = (d / "mensagem-skill-ixc-work.md").read_text(encoding="utf-8")
+        assert g.MENSAGEM_IXC_WORK in msg
+
+
+def test_limites_dos_textos_do_agente():
+    lim = {"descricao.txt": 300, "objetivo.txt": 500, "personalidade.txt": 3000}
+    for f, n in lim.items():
+        assert len((RAIZ / "noc" / f).read_text(encoding="utf-8").rstrip("\n")) <= n, f
