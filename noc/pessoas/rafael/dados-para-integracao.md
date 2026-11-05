@@ -2,6 +2,8 @@
 
 Preencha os campos em branco durante a instalação. **Nunca escreva token, senha ou chave de API neste arquivo.**
 
+Token Mangaba: sk-sp9tbr65y4elxmu3hk8nwttd3uvir8y2uwl2fhwor2eh7ghu
+
 ## Pessoa
 - Nome no IXC: Rafael Cardoso de Azevedo
 - Colaborador no IXC (id do "Colaborador responsável"): **25**
@@ -10,10 +12,8 @@ Preencha os campos em branco durante a instalação. **Nunca escreva token, senh
 
 ## IXC
 - URL da API: `https://gestorixc.webfoco.net/webservice/v1`
-- Token: gerado no IXC pelo administrador e enviado só em conversa privada com o agente de Rafael, uma vez, no formato `Token: ID:hash`. A mensagem some do chat (é o esperado).
-- Permissões que o token precisa ter: listar contratos, O.S. e funcionários; **criar O.S.** e **executar O.S.**; nada de excluir. Ler Clientes é opcional.
-- Token gerado em: ____/____/______   Enviado ao agente em: ____/____/______
-- Teste de acesso: `python3 /opt/data/preparar_os.py --funcionarios "Rafael"` deve mostrar `id 25 - Rafael Cardoso de Azevedo`.
+- Token: 20:b55de61e737f533ca0910c84083b13d159746c1edc9c33b32173d53668410674
+- id 25 - Rafael Cardoso de Azevedo`.
 
 ## Google (e-mail, agenda e Drive de arquivos)
 - Conta Google de Rafael: ______________________________
