@@ -1,5 +1,7 @@
 # Dados para integração: Maria Eduarda (NOC)
 
+Token Mangaba: 
+
 Preencha os campos em branco durante a instalação. **Nunca escreva token, senha ou chave de API neste arquivo.**
 
 ## Pessoa
@@ -10,10 +12,8 @@ Preencha os campos em branco durante a instalação. **Nunca escreva token, senh
 
 ## IXC
 - URL da API: `https://gestorixc.webfoco.net/webservice/v1`
-- Token: gerado no IXC pelo administrador e enviado só em conversa privada com o agente de Maria Eduarda, uma vez, no formato `Token: ID:hash`. A mensagem some do chat (é o esperado).
-- Permissões que o token precisa ter: listar contratos, O.S. e funcionários; **criar O.S.** e **executar O.S.**; nada de excluir. Ler Clientes é opcional.
-- Token gerado em: ____/____/______   Enviado ao agente em: ____/____/______
-- Teste de acesso: `python3 /opt/data/preparar_os.py --funcionarios "Maria Eduarda"` deve mostrar `id 148 - Maria Eduarda Santos da Silva`.
+- Token: 122:319e5424952ccfa419febb8469ca1d312bc3f88c5c79a6332eead0a6153eb646
+- `id 148 - Maria Eduarda Santos da Silva`.
 
 ## Google (e-mail, agenda e Drive de arquivos)
 - Conta Google de Maria Eduarda: ______________________________
