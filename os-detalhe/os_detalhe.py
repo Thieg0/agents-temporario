@@ -300,22 +300,16 @@ def os_do_tecnico(ixc: Ixc, tecnico: int) -> list[dict]:
 
 
 def bloco_desatualizada(r: dict, ixc: Ixc, ref: datetime, campo: str, agora: datetime, hist_n: int) -> str:
+    """Bloco curto: uma linha de identificação e uma linha com a última mensagem (do histórico, ou o campo mensagem da O.S.)."""
     dias = (agora - ref).days
-    linhas = [f"O.S. {r.get('id')} | {nome_status(r.get('status'))} | {nome_tecnico(r.get('id_tecnico'))} | {nome_assunto(ixc, r.get('id_assunto'))}",
-              f"Sem atualização há {dias} dias (última: {ref.strftime('%d/%m/%Y %H:%M')}, campo {campo}) | aberta em {fmt_dt(r.get('data_abertura'))}",
-              "Mensagem: " + (cortar(r.get("mensagem", ""), 350).replace("\n", " / ") or "(vazia)")]
-    resp = cortar(r.get("mensagem_resposta", ""), 250).replace("\n", " / ")
-    if resp:
-        linhas.append("Resposta: " + resp)
-    regs, aviso = historico(ixc, str(r.get("id")), hist_n)
+    linhas = [f"O.S. {r.get('id')} | {nome_tecnico(r.get('id_tecnico'))} | {nome_assunto(ixc, r.get('id_assunto'))} | {dias} dias sem atualização (última {ref.strftime('%d/%m')})"]
+    regs, aviso = historico(ixc, str(r.get("id")), 1)
     if regs:
-        linhas.append(f"Histórico (últimas {len(regs)}):")
-        for h in regs:
-            quem = h.get("id_usuarios") or h.get("id_funcionario") or h.get("id_tecnico") or ""
-            quem_txt = f" - {nome_tecnico(quem)}" if str(quem).strip() not in ("", "0") else ""
-            linhas.append(f"  - {fmt_dt(h.get('data') or h.get('data_hora') or h.get('data_cadastro'))}{quem_txt}: {cortar(str(h.get('mensagem', '')), 200).replace(chr(10), ' / ') or '(sem texto)'}")
-    elif aviso:
-        linhas.append("Histórico: indisponível para este acesso (mostrando só os campos da O.S.)")
+        h = regs[0]
+        texto = cortar(str(h.get("mensagem", "")), 160).replace(chr(10), " / ") or "(sem texto)"
+        linhas.append(f"  Última mensagem ({fmt_dt(h.get('data') or h.get('data_hora') or h.get('data_cadastro'))}): {texto}")
+    else:
+        linhas.append("  Mensagem da O.S.: " + (cortar(r.get("mensagem", ""), 160).replace("\n", " / ") or "(vazia)"))
     return "\n".join(linhas)
 
 
@@ -341,7 +335,7 @@ def relatorio_desatualizadas(ixc: Ixc, tecnicos: list[int], dias: int, agora: da
     if not blocos:
         return ""
     nomes = ", ".join(nome_tecnico(str(t)) for t in tecnicos)
-    topo = f"O.S. desatualizadas ({nomes}): {len(blocos)} sem atualização há mais de {dias} dias. Abertas no total: {total_abertas}" + (f" | pausadas ignoradas: {pausadas}" if pausadas else "")
+    topo = f"O.S. desatualizadas ({nomes}): {len(blocos)} sem atualização há mais de {dias} dias (de {total_abertas} abertas)" + (f", {pausadas} pausadas ignoradas" if pausadas else "")
     return topo + "\n\n" + "\n\n".join(blocos)
 
 

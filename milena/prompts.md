@@ -88,7 +88,7 @@ Responda sempre em português do Brasil.
 
 Siga a skill os-desatualizadas para os técnicos 121 e 161, com --dias 2, sem --so-dias-uteis. Rode o script com date; na frente e envie o texto exatamente como veio (se vierem partes, uma mensagem por parte). Não grave nada.
 ~~~
-Esperado: um cabeçalho "O.S. desatualizadas (Luiz Felipe, Edson): N sem atualização há mais de 2 dias" e, para cada O.S., status, responsável, assunto, "Sem atualização há X dias (última: ..., campo ...)", Mensagem e, se o acesso permitir, Histórico. Confira com a Milena se as O.S. listadas fazem sentido (e se o campo usado na data, que aparece no texto, é o certo).
+Esperado: um cabeçalho "O.S. desatualizadas (Luiz Felipe, Edson): N sem atualização há mais de 2 dias" e, para cada O.S., SÓ DUAS LINHAS: número, técnico, assunto e dias parada; e a última mensagem da aba Mensagens (ou "Mensagem da O.S." se o token não ler essa aba). Confira com a Milena se as O.S. listadas fazem sentido.
 
 ### Passo M3: agendar (só depois de a Milena aprovar o teste)
 ~~~

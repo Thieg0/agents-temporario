@@ -192,16 +192,16 @@ def test_desatualizadas_regras(capsys, servidor):
     # 121: 1 (10 dias) e 2 (4 dias); 161: 6 (30 dias). Exatamente 3 dias (O.S. 3) e recentes não entram; F, C, pausada e outro técnico ficam fora
     assert ids == ["O.S. 1", "O.S. 2", "O.S. 6"], ids
     assert out.splitlines()[0].startswith("O.S. desatualizadas (Luiz Felipe, Edson): 3 sem atualização")
-    assert "pausadas ignoradas: 1" in out and "Sem atualização há 10 dias" in out and "mensagem da 1 / segunda linha" in out
+    assert "1 pausadas ignoradas" in out and "10 dias sem atualização" in out and "mensagem da 1 / segunda linha" in out
 
 
 def test_desatualizadas_mostra_historico_ou_avisa(capsys, servidor):
     Fake.extras = [dict(os_t(1, 121, 10), id="76580")]
     cod, out, _ = rodar_desat(capsys, servidor, "--tecnicos", "121")
-    assert cod == 0 and "Histórico (últimas 3):" in out and "atualização 7" in out and "atualização 4" not in out
+    assert cod == 0 and "Última mensagem (" in out and "atualização 7" in out and "atualização 6" not in out and "Histórico" not in out
     Fake.permitir_historico = False
     cod, out, _ = rodar_desat(capsys, servidor, "--tecnicos", "121")
-    assert "Histórico: indisponível" in out and "Mensagem: mensagem da 1 / segunda linha" in out
+    assert "Mensagem da O.S.: mensagem da 1 / segunda linha" in out
 
 
 def test_desatualizadas_silencio_fim_de_semana_e_sem_pendencia(capsys, servidor):

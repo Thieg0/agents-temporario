@@ -24,11 +24,11 @@ date; python3 /opt/data/os_detalhe.py --desatualizadas --tecnicos 121,161 --dias
 - Se NÃO imprimir nada (fim de semana ou nenhuma O.S. desatualizada): no agendamento, NÃO envie mensagem. Em pedido direto da pessoa, diga "nenhuma O.S. desatualizada".
 - Se imprimir: envie EXATAMENTE como veio. Se vier a linha `<<<PARTE>>>`, envie cada parte como uma mensagem separada, na ordem, sem a linha separadora. Não resuma, não reordene, não acrescente dados.
 - Se terminar com erro ("Erro: ..."): avise a pessoa com o texto do erro e PARE.
-- Se a saída disser "Histórico: indisponível", é a permissão do token; não tente outro caminho.
+- Se a linha da O.S. trouxer "Mensagem da O.S." em vez de "Última mensagem", é porque o token não lê a aba Mensagens; não tente outro caminho.
 
 ## 4. Regras do relatório (para você explicar, nunca para recalcular)
 - Aberta = status diferente de F (finalizada) e C (cancelada). Pausadas (assunto 278) ficam de fora e são só contadas.
-- "Sem atualização" = a data mais recente entre a última atualização da O.S., execução, assunção e abertura. O texto mostra qual campo foi usado.
+- "Sem atualização" = a data mais recente entre a última atualização da O.S., execução, assunção e abertura. 
 - Ordem: a mais antiga primeiro, por técnico.
 - Cada O.S. traz a mensagem (descrição, com as atualizações escritas nela), a resposta se houver e as últimas atualizações do histórico quando o acesso permitir.
 - Se a pessoa pedir detalhes de uma das O.S. do relatório, use a skill detalhe-os com o número daquela O.S.
