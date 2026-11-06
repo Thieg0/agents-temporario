@@ -89,3 +89,13 @@ def test_cabecalho_das_skills_e_yaml_valido():
         assert texto.startswith("---\n"), f
         dados = yaml.safe_load(texto.split("---")[1])
         assert dados["name"] and 0 < len(dados["description"]) <= 1024, f
+
+
+def test_regras_anti_desvio_na_skill_e_no_roteiro():
+    skill = (RAIZ / "noc" / "skill-abrir-os-noc.md").read_text(encoding="utf-8")
+    for frase in ("## 0. Pedido de criar OS", "PROIBIDO", "assunto 55", "Nunca use assunto 14", "SEMPRE a ação Executar", "não procure por outro caminho", "só vale para a simulação"):
+        assert frase in skill, frase
+    for pasta, completo, nome, cid in g.PESSOAS:
+        r = (RAIZ / "noc" / "pessoas" / pasta / "prompts.md").read_text(encoding="utf-8")
+        for frase in ("/new", "Regra fixa", "Se o agente sair do padrão", f"{nome} (id {cid})", "SDR TAF 83108054"):
+            assert frase in r, (pasta, frase)

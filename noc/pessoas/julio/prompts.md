@@ -73,25 +73,44 @@ Responda sempre em português do Brasil.
 Rode: python3 /opt/data/preparar_os.py --abrir --designacao "SDR TAF 83108054" --chamado "OEMP-TESTE" --motivo "Inoperante" --colaborador 14 e mostre a saída exatamente como veio. NÃO use --gravar. Se der erro, mostre só a mensagem e pare. Não use curl, não mostre token.
 ~~~
 Esperado: "SIMULAÇÃO: nada foi gravado", colaborador `id 14 - Julio Cesar`, contrato 8054, assunto 55, filial 2, setor 14, prioridade N.
+Depois de concluir o Passo 4, envie `/new` e siga para o Passo 5.
 
-## Passo 5: deixar pronto para o uso diário
-O fluxo real já foi validado no IXC pelo Thiego (OS aberta e executada com sucesso). Aqui não se grava nada: só se confirma que a skill está ativa e que o agente faz as perguntas na ordem certa.
+## Passo 5: deixar pronto para o uso diário (regras fixas e ensaio)
+O fluxo real já foi validado no IXC (OS aberta e executada com sucesso). Aqui não se grava nada: só se confirma que o agente segue a skill. Faça na ordem.
 
-### Prompt 5.1: ativar
+### 5.0: começar uma conversa nova
+Depois de instalar ou atualizar qualquer skill ou o script, envie `/new` no chat do agente. Uma conversa aberta antes da instalação pode não enxergar a skill nova (foi o que causou a primeira OS fora do padrão).
+
+### Prompt 5.1: regra fixa
 ~~~
 Responda sempre em português do Brasil.
 
-A skill abrir-os-noc passa a valer para todo pedido meu de criar OS. Quando eu colar os dados de um chamado e escrever "crie essa O.S", "cria a OS", "abre a OS", "gera a OS" ou qualquer variação, siga a skill abrir-os-noc, com Julio (id 14) como responsável: simule, mostre a saída, peça meu OK, só então grave, mostre o 🔔 ID DA OS, pergunte qual é o parceiro e depois se já acionou. Confirme em uma linha.
+Regra fixa a partir de agora: quando eu pedir para criar, abrir, gerar ou executar uma O.S. no IXC ("crie essa OS", "abre a OS" ou parecido), você SEMPRE usa a skill abrir-os-noc (script /opt/data/preparar_os.py), com Julio (id 14) como responsável. A primeira ação é a simulação da skill. Antes dela você NÃO consulta o IXC por conta própria, NÃO usa a api_integracao, NÃO cria dashboard, tarefa nem lembrete e NÃO escolhe assunto, contrato, técnico, setor ou prioridade (quem decide é o script: assunto 55, setor 14, filial 2, prioridade Normal). Só grava depois do meu OK sobre a simulação que você mostrou. O acionamento do parceiro é só a ação Executar da skill, nunca texto acrescentado na mensagem. Se a skill falhar ou o script não achar o contrato, pare e me avise. Confirme em uma linha.
 ~~~
 
 ### Prompt 5.2: ensaio completo, sem gravar
 ~~~
 Responda sempre em português do Brasil.
 
-Isto é uma SIMULAÇÃO, não grave nada. Crie essa O.S: designação SDR TAF 83108054, chamado interno OEMP-TESTE, motivo Inoperante.
+Isto é uma SIMULAÇÃO, não grave nada. Siga a skill abrir-os-noc. Crie essa O.S: designação SDR TAF 83108054, chamado interno OEMP-TESTE, motivo Inoperante.
 ~~~
-Esperado: o agente roda a simulação e mostra a saída, pergunta "Qual é o parceiro desta vez?"; responda `Saturno` e ele pergunta "Já acionou o parceiro?"; responda `sim` e ele deve dizer que nada foi gravado (sem ID de OS). Se o agente tentar gravar ou inventar um ID, escreva ao Thiego.
+Esperado, nesta ordem: (1) o agente roda `date; python3 /opt/data/preparar_os.py --abrir ... --colaborador 14` sem fazer nenhuma busca antes; (2) mostra "SIMULAÇÃO: nada foi gravado", assunto 55, setor 14, filial 2, prioridade N, contrato 8054; (3) pergunta se pode abrir. Responda `não, é só um teste`. Pronto: o agente seguiu a skill.
+Para ensaiar também as perguntas do parceiro, responda `pode abrir, mas é teste, não grave`; ele deve perguntar "Qual é o parceiro desta vez?" e depois "Já acionou o parceiro?", e dizer que nada foi gravado.
+
+### Se o agente sair do padrão
+| O que aparece | O que fazer |
+|---|---|
+| Ele diz "vou verificar a integração", busca OS parecidas ou fala em "padrão das OSs" | Não aprove nada. Envie `/new` e repita o Prompt 5.1 e depois o pedido, começando por `Siga a skill abrir-os-noc.` |
+| Assunto 14 (Reparo), prioridade "1", técnico "1", contrato ou interconexão diferentes do script | Não aprove. É sinal de que ele não rodou o script. `/new` e refazer. |
+| Ele cria dashboard, tarefa ou "checkpoint" | Escreva `Pare. Não crie nada disso. Siga só a skill abrir-os-noc.` e, se continuar, `/new`. |
+| "A sessão foi reiniciada e perdi o contexto" | Normal depois de `/new`: cole de novo os dados do chamado e escreva `Crie essa OS`. |
+| O script diz "JÁ EXISTE OS ABERTA" | É a trava de duplicata. Só abra outra se for mesmo necessário, escrevendo `abra outra OS mesmo assim, a aberta é a <número>`. |
+| O script diz "PARAR" ou não acha contrato | Confira a designação (copie exatamente do chamado). Não deixe o agente procurar por outro identificador. |
+| O agente cola uma saída velha ou sem a data de agora | Escreva `Rode o comando de novo, com date; na frente.` |
+| O agente "registrou o acionamento" escrevendo na mensagem da OS | Está errado: o certo é a ação Executar. Escreva `Use o Executar da skill, não edite a mensagem.` |
+| Ele não responde ou diz que não tem a skill | Confira com o Prompt 4.1 e `/new`. |
 
 ## Depois
 - Uso diário: colar os dados do chamado no chat e escrever `Crie essa O.S` (ou variação).
 - Se o `--help` falhar por versão do Python (menor que 3.9), avisar o Thiego.
+- Toda vez que uma skill ou o script for atualizado, envie `/new` antes de usar.

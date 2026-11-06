@@ -7,6 +7,13 @@ description: Abre no IXC a OS de falha de circuito (assunto Geral) quando o cola
 
 Arquivo de apoio: /opt/data/preparar_os.py (não altere). O script consulta e grava no IXC sozinho. Por padrão ele só SIMULA; só grava com --gravar.
 
+## 0. Pedido de criar OS: a primeira ação é sempre a simulação
+Quando o colaborador pedir para criar, abrir, gerar ou registrar uma OS (por exemplo "crie essa OS"), esta skill é o ÚNICO caminho. A primeira coisa que você faz é pegar designação, chamado interno e motivo (passo 3) e rodar a simulação do passo 4. Antes disso é PROIBIDO:
+- consultar o IXC por conta própria (buscar contrato, cliente, interconexão, OS parecidas "para ver o padrão");
+- usar a api_integracao, outra skill, dashboard, tarefa ou lembrete;
+- escolher assunto, contrato, técnico, setor, filial ou prioridade. Quem decide tudo isso é o script: assunto 55 (Geral), setor 14 (NOC), filial 2, prioridade Normal (N), técnico = o colaborador que abre. Nunca use assunto 14 (Reparo), prioridade "1" nem técnico "1".
+Se a conversa tiver reiniciado (/new) e você perdeu o contexto, não invente nada e não diga que "perdeu o contexto do que seria registrado": peça de novo os dados do chamado e recomece pelo passo 3.
+
 ## 1. Segurança (valem sempre)
 1. Só use --gravar depois do OK explícito do colaborador nesta conversa. Sem OK, rode só a simulação. Nunca DELETE.
 2. O script pega o acesso sozinho. NUNCA usar curl, nunca ler o cofre-chaves.json nem o token, nunca pedir token.
@@ -16,6 +23,11 @@ Arquivo de apoio: /opt/data/preparar_os.py (não altere). O script consulta e gr
 6. Mostrar só o que o script imprimir. Sem telefone, e-mail ou endereço de cliente.
 7. NUNCA reaproveite, resuma nem reescreva uma saída anterior. A cada pedido, rode o script de novo, num único comando que comece com `date;` (exemplo: `date; python3 /opt/data/preparar_os.py ...`), e cole a saída completa, literal, incluindo a linha da data. Se a hora do `data_abertura` não for a de agora, a saída é velha: não use.
 8. Nunca grave no IXC por outro caminho (outra ferramenta, outro script, PUT, PATCH ou api_integracao) neste fluxo: só o preparar_os.py, com --gravar e só depois do OK.
+9. O acionamento do parceiro é SEMPRE a ação Executar do passo 7. Nunca registre acionamento acrescentando texto na mensagem da OS nem com PUT: isso não muda o status e não conta como executada.
+10. Se o script disser que não achou contrato para a designação, não procure por outro caminho (nome do ponto, OEMP, IP, outro contrato parecido) e não use o contrato de uma OS parecida. Peça ao colaborador a designação correta. Designação estranha (por exemplo só um número de cliente, ou sem o prefixo habitual como "SDR ...") também: pergunte antes de rodar.
+11. Aprovação: "sim", "pode abrir" ou "aprovado" só vale para a simulação que você acabou de mostrar nesta conversa. Se não houver simulação mostrada, rode-a primeiro.
+12. Mostre sempre a saída do script literal. Não escreva "verificação independente" nem resumos seus no lugar da saída: o script já relê a OS e confere os campos.
+13. Depois de gravar, informe só o 🔔 ID DA OS e o que o script imprimiu. Se o colaborador disser que vai ajustar algo na tela, não tente corrigir por API.
 
 ## 2. Quem está abrindo
 O "Colaborador responsável" é quem está abrindo a OS. Se este arquivo trouxer a linha "Colaborador padrão desta pessoa", use-a sem perguntar. Se não trouxer, pergunte o nome uma vez e lembre dele na conversa. Ids no IXC:
