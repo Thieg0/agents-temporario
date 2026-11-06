@@ -12,7 +12,7 @@ Responda sempre em português do Brasil.
 
 Rode `date;` e siga a skill relatorio-emails-manha para as últimas 24 horas. Mostre o relatório aqui no chat, sem enviar nada por e-mail. Depois me diga quantas threads leu e quantas ignorou.
 
-(Conferir com a caixa de entrada: as categorias estão certas? Algo importante ficou em "restantes"? Se sim, avise o Thieg com o exemplo.)
+(Conferir com a caixa de entrada: só vieram agendamento, boas-vindas e destaques realmente importantes? Algo importante ficou de fora? Se sim, avise o Thieg com o exemplo.)
 
 ## Prompt 3: agendar (só depois de conferir)
 Responda sempre em português do Brasil.
@@ -24,8 +24,8 @@ Crie um agendamento: seg a sex às 8h (America/Sao_Paulo), siga a skill relatori
 |---|---|
 | Respondeu ou enviou e-mail | "Pare. Esta rotina é somente leitura. Siga a skill relatorio-emails-manha, seção 1." |
 | Mostrou e-mail completo ou telefone | "Siga a regra 4 da skill: sem endereços nem telefones." |
-| Inventou categoria | "Use só as 4 categorias da seção 3." |
-| Mandou mensagem vazia | "Sem e-mails no período, não envie nada." |
+| Listou e-mails demais | "Siga a seção 3 da skill: só agendamento, boas-vindas e no máximo 5 destaques; o resto só entra na contagem de ignorados." |
+| Mandou mensagem vazia | "Sem itens nos 3 grupos, não envie nada." |
 | Não achou a caixa | Reconectar a integração de e-mail com o supervisor |
 
 ## Depois

@@ -1,6 +1,6 @@
 ---
 name: relatorio-emails-manha
-description: Relatório diário da manhã com os e-mails recebidos e enviados na caixa da pessoa, separados em agendamento, boas-vindas, cobrança e termo de adesão, e restantes. Somente leitura. Use no agendamento diário e quando a pessoa pedir o relatório de e-mails.
+description: Relatório diário da manhã com os e-mails recebidos e enviados na caixa da pessoa, com só três grupos: agendamento, boas-vindas e destaques importantes. Somente leitura. Use no agendamento diário e quando a pessoa pedir o relatório de e-mails.
 ---
 
 # Relatório de e-mails da manhã
@@ -17,16 +17,17 @@ Serve para a pessoa dona deste agente (comercial Webfoco) começar o dia sabendo
 
 ## 2. Período
 - Sempre as últimas 24 horas contadas a partir de agora (use o `date;`), inclusive às segundas e depois de feriados.
-- Além disso, liste como "pendentes antigos" apenas as threads de agendamento e termo de adesão dos últimos 7 dias em que o último e-mail é do cliente (ou nosso há mais de 48h úteis sem resposta dele).
+- Não listar pendências antigas; só o que chegou ou foi enviado nesse período.
 
-## 3. Como classificar (pelo assunto e pelo corpo)
+## 3. O que entra no relatório (só isto)
 Cada thread entra em UMA categoria, nesta ordem:
 1. Agendamento: fala de agendar, reagendar, visita, instalação, data, horário.
 2. Boas-vindas: e-mail de boas-vindas de novo cliente ou de ativação.
-3. Cobrança e termo de adesão: cobrança de documentos, termo de adesão, assinatura, documentação pendente.
-4. Restantes: todo o resto que for de cliente, parceiro ou operação. Ignore propaganda, newsletters, notificações automáticas e spam (conte quantos ignorou, numa linha só).
+3. Destaques: SOMENTE o que você julgar realmente importante para a pessoa agir ou saber hoje, por exemplo: cliente reclamando ou ameaçando cancelar, pedido urgente ou com prazo, problema de documentação ou termo de adesão travado, resposta que estava aguardando, erro ou recusa de parceiro. Máximo 5 itens; escolha os mais importantes.
 
-Na dúvida entre duas categorias, use a primeira da ordem e não explique.
+TUDO o mais NÃO entra: propaganda, newsletters, notificações automáticas, avisos de sistema, cobranças de rotina, e-mails informativos sem ação, conversas já resolvidas, e-mails internos sem pedido. Esses só são contados numa linha ("Outros e-mails ignorados: N"), sem listar.
+
+Na dúvida se algo é importante, NÃO coloque em destaques.
 
 ## 4. Formato da mensagem (Telegram, texto simples, sem emojis)
 ```
@@ -37,20 +38,18 @@ AGENDAMENTO (<n>)
 - <cliente/empresa>: <o que pede ou o que falta, 1 linha>. Situação: aguardando nós | aguardando cliente | resolvido.
 
 BOAS-VINDAS (<n>)
-- ...
+- <cliente>: <enviado/recebido, 1 linha>
 
-COBRANÇA E TERMO DE ADESÃO (<n>)
-- <cliente>: <o que está pendente>. Último contato: <dd/mm>, de <nós|cliente>.
+DESTAQUES (<n>)
+- <cliente/remetente>: <por que é importante e o que fazer, 1 linha>
 
-RESTANTES (<n>)
-- <remetente/empresa>: <assunto resumido>
-
-Ignorados (propaganda/automáticos): <n>
+Outros e-mails ignorados: <n>
 ```
-- Categoria sem itens: escreva "nenhum".
-- Aguardando nós vem primeiro dentro de cada categoria.
-- Máximo 3800 caracteres por mensagem; se passar, divida em partes por categoria.
+- Grupo sem itens: escreva "nenhum".
+- Aguardando nós vem primeiro dentro de cada grupo.
+- Máximo 3800 caracteres por mensagem.
 - Termine com uma única frase dizendo o que merece atenção primeiro.
+- Se os três grupos estiverem vazios, NÃO envie mensagem.
 
 ## 5. O que NÃO fazer
 - Não propor nem redigir resposta, a menos que a pessoa peça depois.
