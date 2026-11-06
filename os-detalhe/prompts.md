@@ -42,12 +42,16 @@ Esperado: o agente roda `date; python3 /opt/data/os_detalhe.py ...`, responde em
 ## Milena: relatório da manhã das O.S. desatualizadas (Luiz Felipe e Edson)
 Somente no agente da Milena, depois dos Passos 1 a 4 (o script é o mesmo). Combinado: todo dia útil de manhã, as O.S. abertas do Luiz Felipe (121) e do Edson (161) sem atualização há mais de 2 dias, com a mensagem da O.S. e o histórico. Ajuste `--dias` se ela quiser outro prazo.
 
-### Passo M1: instalar a skill
-Anexe o `skill-os-desatualizadas.md` e envie:
+### Passo M1: substituir/instalar a skill (anexe o arquivo novo)
+Atenção ao nome: ao anexar de novo, o arquivo pode chegar como `skill-os-desatualizadas(2).md`. O nome do arquivo NÃO importa; o nome da skill é `os-desatualizadas` (campo name dentro do arquivo).
 ~~~
 Responda sempre em português do Brasil.
 
-Instale o anexo como skill nova (o nome, os-desatualizadas, está dentro do arquivo). Se já existir uma skill com esse nome, mova a antiga para a pasta .archive antes, sem apagar. NÃO execute nada além disso. Responda só com onde a skill ficou e o tamanho do arquivo em bytes.
+Substitua a skill os-desatualizadas pelo arquivo anexo (pode ter nome como skill-os-desatualizadas(2).md; ignore o nome do arquivo e use o campo name de dentro dele, que é os-desatualizadas).
+1) Localize a skill já instalada com name os-desatualizadas e mova a antiga para a pasta .archive, sem apagar.
+2) Instale o anexo com o nome os-desatualizadas (sem "(2)" nem outros sufixos) no lugar dela.
+3) Confira que existe UMA só skill os-desatualizadas ativa (nenhuma cópia com "(2)" no nome) e responda só com: onde ela ficou e o tamanho do arquivo em bytes.
+NÃO execute o script e não consulte o IXC.
 ~~~
 Depois envie `/new`.
 
@@ -57,7 +61,7 @@ Responda sempre em português do Brasil.
 
 Siga a skill os-desatualizadas para os técnicos 121 e 161, com --dias 2, sem --so-dias-uteis. Rode o script com date; na frente e envie o texto exatamente como veio (se vierem partes, uma mensagem por parte). Não grave nada.
 ~~~
-Esperado: um cabeçalho "O.S. desatualizadas (Luiz Felipe, Edson): N sem atualização há mais de 2 dias" e, para cada O.S., SÓ DUAS LINHAS: número, técnico, assunto e dias parada; e a última mensagem da aba Mensagens (ou "Mensagem da O.S." se o token não ler essa aba). Confira com a Milena se as O.S. listadas fazem sentido.
+Esperado: um cabeçalho "O.S. desatualizadas (Luiz Felipe, Edson): N sem atualização há mais de 2 dias" e, para cada O.S., UMA LINHA DE TABELA com as colunas O.S. | Responsável | Assunto | Dias parada | Última mensagem (ou o campo mensagem da O.S. se o token não ler a aba Mensagens). Confira com a Milena se as O.S. listadas fazem sentido.
 
 ### Passo M3: agendar (só depois de a Milena aprovar o teste)
 ~~~

@@ -22,13 +22,15 @@ date; python3 /opt/data/os_detalhe.py --desatualizadas --tecnicos 121,161 --dias
 
 ## 3. Depois de rodar
 - Se NÃO imprimir nada (fim de semana ou nenhuma O.S. desatualizada): no agendamento, NÃO envie mensagem. Em pedido direto da pessoa, diga "nenhuma O.S. desatualizada".
-- Se imprimir: envie EXATAMENTE como veio. Se vier a linha `<<<PARTE>>>`, envie cada parte como uma mensagem separada, na ordem, sem a linha separadora. Não resuma, não reordene, não acrescente dados.
+- Se imprimir: monte a mensagem EM FORMATO DE TABELA, uma linha por O.S., com estas colunas e nesta ordem: O.S. | Responsável | Assunto | Dias parada | Última mensagem. Copie os valores do script sem mudar (a coluna Última mensagem pode ser encurtada para no máximo 100 caracteres, com "..."). Mantenha a ordem do script e acima da tabela só a linha de cabeçalho dele ("O.S. desatualizadas (...): N ..."). Sem comentários, sem sugestões, sem dados que não estejam no script.
+- Exemplo de uma linha: `| 76580 | Edson | Instalação fibra | 10 | 06/11 17:00: cliente pediu remarcação |`
+- Se vier a linha `<<<PARTE>>>`, envie cada parte como uma mensagem separada (cada uma com a tabela e o seu cabeçalho de colunas), sem a linha separadora.
 - Se terminar com erro ("Erro: ..."): avise a pessoa com o texto do erro e PARE.
 - Se a linha da O.S. trouxer "Mensagem da O.S." em vez de "Última mensagem", é porque o token não lê a aba Mensagens; não tente outro caminho.
 
 ## 4. Regras do relatório (para você explicar, nunca para recalcular)
 - Aberta = status diferente de F (finalizada) e C (cancelada). Pausadas (assunto 278) ficam de fora e são só contadas.
-- "Sem atualização" = a data mais recente entre a última atualização da O.S., execução, assunção e abertura. 
+- "Sem atualização" = a data mais recente entre a última atualização da O.S., execução, assunção e abertura.
 - Ordem: a mais antiga primeiro, por técnico.
-- Cada O.S. traz a mensagem (descrição, com as atualizações escritas nela), a resposta se houver e as últimas atualizações do histórico quando o acesso permitir.
+- Cada O.S. traz a última mensagem da aba Mensagens (ou o campo mensagem da O.S., se o acesso não permitir).
 - Se a pessoa pedir detalhes de uma das O.S. do relatório, use a skill detalhe-os com o número daquela O.S.
