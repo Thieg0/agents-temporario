@@ -214,10 +214,12 @@ Esse é o fluxo validado em produção (≈80 contratos). Para outro tipo de con
 ## 6. Ordens de serviço (O.S.)
 
 ### 6.1 Abrir uma O.S. (POST na tabela `su_oss_chamado`, com meu OK)
+**Prioridade da skill específica:** se existir uma skill própria da sua área ou do processo para abrir esta O.S. (por exemplo, a do NOC), use-a e **não** use este caminho genérico. O caminho genérico é só para quando não houver skill específica e eu pedir explicitamente. Nunca invente assunto, setor, técnico ou prioridade: use os valores que eu informar ou os da O.S. de referência.
+
 Antes: identifique o cliente e o contrato (consultas 4.1 a 4.3), o assunto (`su_oss_assunto`), o setor e o responsável (`funcionarios`). **Confira se já existe O.S. aberta (status ≠ F) para o mesmo contrato/designação**: se existir, me mostre o número e não abra outra, a menos que eu mande e cite o número da existente. Mostre o resumo (cliente, contrato, assunto, setor, responsável, descrição, endereço) e espere o OK.
 
 Corpo (valores da Webfoco [confirmado]; copie a estrutura de uma O.S. recente do mesmo tipo quando houver):
-- `tipo "C"`, `id_cliente`, `id_contrato_kit` (contrato), `id_assunto`, `id_filial`, `setor`, `id_tecnico` (responsável), `prioridade` (`N` normal), `status "A"`, `mensagem` (descrição, quebras de linha `\r\n`), `data_abertura` (agora, `dd/mm/aaaa hh:mm:ss`).
+- `tipo "C"`, `id_cliente`, `id_contrato_kit` (contrato), `id_assunto`, `id_filial`, `setor`, `id_tecnico` (responsável), `prioridade` (letra: `N` normal; o número `1` é recusado e o IXC grava `B` baixa), `status "A"`, `mensagem` (descrição, quebras de linha `\r\n`), `data_abertura` (agora, `dd/mm/aaaa hh:mm:ss`).
 - Padrões que a tela preenche e a API deixa vazios (envie): `protocolo` (novo, `aaaammddhhmmss` + 6 dígitos), `liberado "1"`, `gera_comissao "S"`, `impresso "N"`, `melhor_horario_agenda "Q"`, `origem_cadastro "P"`, `origem_endereco "M"`, `origem_os_aberta "M"`, `origem_endereco_estrutura "M"`, `status_assinatura "A"`, `status_sla "N"`.
 - Endereço: `endereco`, `numero`, `bairro`, `complemento`, `cep`, `id_cidade`, copiados de uma O.S. anterior cujo endereço bate com o do contrato (a mais recente), ou do próprio contrato. Na tela o equivalente é "Puxar endereço por: Contrato" trocando a cidade padrão (Brasília) pela cidade certa.
 
@@ -355,6 +357,7 @@ Tudo aqui foi aprendido errando e acertando nas automações da Webfoco (migraç
 - **Mensagem do Executar no NOC:** `Acionado parceiro <nome do parceiro> via WhatsApp` (a pessoa informa o parceiro; nunca supor). O texto do agente foi aprovado assim.
 - **Descrição da O.S. do NOC (4 linhas):** `Designação / Vlan: …`, `Cliente Final: …` (tirado do nome do contrato `<id> - <final> - …`), `Chamado interno: …`, `Motivo do chamado: …`.
 - **Quem é o responsável:** `id_tecnico` = id do colaborador (tabela `funcionarios`), o "Colaborador responsável" da tela.
+- **Executar não é editar a mensagem.** Registrar que o parceiro foi acionado é a ação Executar (`su_oss_chamado_executar`), não um PUT acrescentando texto na mensagem da O.S.: o PUT não muda o status para execução.
 - **Alerta de prazo:** aberta = `status ≠ F` (e ≠ C); pausada = `id_assunto 278` (Pausado/Congelado); alerta = aberta há mais de 48 h contando de `data_abertura` (Brasília), exceto pausadas; grupos: crítico (mais de 30 dias), atenção (7 a 30 dias) e recente (48 h a 7 dias). `data_prazo_limite` e variações (`data_prev_final`, `data_agenda`...) vêm **zeradas**: não existe prazo para ordenar; use dias em aberto. O assunto vem como `id_assunto` (número).
 - **Conferir a contagem:** o `total` da resposta do IXC tem que bater com o que você recebeu; se uma O.S. fechar entre duas leituras, o número muda (não é erro).
 
