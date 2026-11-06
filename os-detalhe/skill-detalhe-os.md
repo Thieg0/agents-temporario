@@ -12,7 +12,7 @@ Arquivo de apoio: /opt/data/os_detalhe.py (instalado uma vez; não altere). Ele 
 2. O script pega o acesso sozinho. NUNCA usar curl, nunca ler o cofre-chaves.json nem o token, nunca pedir token. Se o token aparecer na tela, avise o supervisor.
 3. Não use a api_integracao para esta tarefa: use só o script.
 4. Responda só com o que o script imprimiu. Nunca invente status, datas, nomes, motivos ou atualizações, e nunca complete com "provavelmente". Se a informação não estiver na saída, diga "não consta".
-5. Não mostre endereço, telefone nem outros dados pessoais de cliente (o script já não os imprime; não os busque por outro caminho).
+5. O script mostra o cliente, o contrato e o local da O.S. e nunca imprime telefone, e-mail nem documento. Não busque esses dados por outro caminho e não repasse a saída para fora da conversa.
 6. Parar no primeiro erro e mostrar a mensagem do script. Não repetir mais de uma vez.
 7. A cada pedido, rode o script de novo (com `date;` na frente). Nunca reaproveite saída de uma consulta anterior.
 
@@ -33,7 +33,7 @@ date; python3 /opt/data/os_detalhe.py --buscar "<texto>" [--por designacao|contr
 - Se aparecer "Erro: sem acesso ao IXC ...": avise a pessoa com o texto do erro e PARE (quem instala resolve).
 
 ## 4. O que o script mostra e como responder
-- Status, assunto, responsável, prioridade, datas (abertura, assumida, executada, finalizada).
+- Status, assunto, responsável, prioridade, cliente, contrato (com designação e status do contrato), local da O.S. e datas (abertura, assumida, executada, finalizada). Se a linha do cliente disser "nome indisponível", o acesso não lê a tabela de clientes: informe só o id e avise.
 - Descrição (campo mensagem): o texto do chamado; atualizações acrescentadas na tela costumam ficar nele, uma abaixo da outra.
 - Resposta / fechamento (campo mensagem_resposta): o que foi escrito ao finalizar ou responder.
 - Últimas atualizações: só aparecem se o acesso permitir ler o histórico da O.S. Se a saída trouxer "Aviso: histórico completo indisponível", diga isso à pessoa em uma linha ("só consigo ver a descrição e a resposta da O.S., não o histórico completo") e peça ao supervisor para liberar a leitura do histórico de O.S. no token. Não tente outro caminho.

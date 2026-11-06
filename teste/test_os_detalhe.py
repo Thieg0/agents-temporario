@@ -14,7 +14,7 @@ TOKEN = "184:abcdef0123456789abcdef0123456789"
 OSS = [
     {"id": "76580", "status": "F", "id_assunto": "135", "id_tecnico": "184", "prioridade": "B", "id_cliente": "150", "id_contrato_kit": "7386",
      "data_abertura": "2026-11-06 09:41:27", "data_hora_assumido": "0000-00-00 00:00:00", "data_hora_execucao": "2026-11-06 11:47:36",
-     "data_fechamento": "2026-11-06 12:14:50", "endereco": "Rua Secreta 99", "telefone": "82999990000",
+     "data_fechamento": "2026-11-06 12:14:50", "endereco": "Rua Secreta", "numero": "99", "bairro": "Centro", "cep": "57000-000", "id_cidade": "1695", "telefone": "82999990000", "email": "x@y.com",
      "mensagem": "Designação / Vlan: SDR BRM 83104884 - Chamado interno: OEMP-42798\r\n", "mensagem_resposta": "Pendencia Cliente: Validação cliente\r\n"},
     {"id": "76581", "status": "A", "id_assunto": "55", "id_tecnico": "114", "prioridade": "N", "id_cliente": "150", "id_contrato_kit": "8054",
      "data_abertura": "2026-11-06 10:00:00", "data_hora_assumido": "0000-00-00 00:00:00", "data_hora_execucao": "0000-00-00 00:00:00",
@@ -28,6 +28,7 @@ HIST = [{"id": str(i), "id_chamado": "76580", "mensagem": f"atualização {i}", 
 
 class Fake(BaseHTTPRequestHandler):
     permitir_historico = True
+    permitir_cliente = True
     chamadas = []
 
     def log_message(self, *a):
@@ -45,6 +46,14 @@ class Fake(BaseHTTPRequestHandler):
             if not Fake.permitir_historico:
                 return self._json({"type": "error", "message": "Você não tem permissão para acessar o recurso"})
             regs = sorted([h for h in HIST if h["id_chamado"] == valor], key=lambda h: int(h["id"]), reverse=corpo.get("sortorder") == "desc")
+        elif tabela == "cliente":
+            if not Fake.permitir_cliente:
+                return self._json({"type": "error", "message": "Você não tem permissão para acessar o recurso"})
+            regs = [{"id": "150", "razao": "Oi Móvel S.A", "fantasia": "Oi", "cnpj_cpf": "00.000.000/0001-00", "telefone_celular": "82999990000"}] if valor == "150" else []
+        elif tabela == "cliente_contrato":
+            regs = [{"id": "7386", "contrato": "7386 - Vídeo Polícia BPRV-059 - L2L", "descricao_aux_plano_venda": "SDR IMJ 83107386", "status": "A"}] if valor == "7386" else []
+        elif tabela == "cidade":
+            regs = [{"id": "1695", "nome": "Maceió"}] if valor == "1695" else []
         elif tabela == "su_oss_assunto":
             regs = [{"id": "135", "assunto": "Reparo Incidentes"}] if valor == "135" else []
         else:
@@ -63,6 +72,7 @@ class Fake(BaseHTTPRequestHandler):
 @pytest.fixture()
 def servidor():
     Fake.permitir_historico = True
+    Fake.permitir_cliente = True
     Fake.chamadas = []
     s = HTTPServer(("127.0.0.1", 0), Fake)
     threading.Thread(target=s.serve_forever, daemon=True).start()
@@ -94,9 +104,23 @@ def test_sem_permissao_no_historico_segue_com_os_campos(capsys, servidor):
     assert "Pendencia Cliente" in out  # campos da O.S. continuam
 
 
-def test_nao_imprime_endereco_telefone_nem_token(capsys, servidor):
+def test_cliente_contrato_e_local(capsys, servidor):
     cod, out, err = rodar(capsys, servidor, "--os", "76580")
-    assert "Rua Secreta" not in out and "82999990000" not in out and TOKEN not in out + err
+    assert "Cliente: Oi Móvel S.A (Oi) [id 150]" in out
+    assert "Contrato: 7386 - Vídeo Polícia BPRV-059 - L2L [id 7386] | SDR IMJ 83107386 | status do contrato A" in out
+    assert "Local da O.S.: Rua Secreta, 99, Centro, Maceió - CEP 57000-000" in out
+
+
+def test_nunca_imprime_telefone_email_documento_nem_token(capsys, servidor):
+    cod, out, err = rodar(capsys, servidor, "--os", "76580")
+    for segredo in ("82999990000", "x@y.com", "00.000.000/0001-00", TOKEN):
+        assert segredo not in out + err
+
+
+def test_sem_permissao_em_clientes_mostra_id_e_segue(capsys, servidor):
+    Fake.permitir_cliente = False
+    cod, out, err = rodar(capsys, servidor, "--os", "76580")
+    assert cod == 0 and "Cliente: id 150 (nome indisponível" in out and "Pendencia Cliente" in out
 
 
 def test_busca_unica_mostra_detalhe_e_varias_lista(capsys, servidor):

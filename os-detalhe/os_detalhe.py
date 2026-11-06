@@ -8,9 +8,9 @@ Uso (o agente descobre os parâmetros pela mensagem da pessoa; este script nunca
   python3 os_detalhe.py --buscar 7386 --por contrato          procura pelo id do contrato (ou --por cliente)
   python3 os_detalhe.py --testar-acesso
 
-O que mostra: status, assunto, responsável, datas, descrição (campo mensagem) e a resposta/fechamento (mensagem_resposta).
+O que mostra: status, assunto, responsável, cliente, contrato, local, datas, descrição (campo mensagem) e a resposta/fechamento (mensagem_resposta).
 Se o token tiver permissão na tabela de mensagens da O.S. (su_oss_chamado_mensagem), mostra também o histórico de
-atualizações; se não tiver, avisa na saída e segue só com os campos da O.S. Nunca imprime endereço, telefone nem token.
+atualizações; se não tiver, avisa na saída e segue só com os campos da O.S. Mostra o cliente, o contrato e o local da O.S. (endereço do atendimento); nunca imprime telefone, e-mail, CPF/CNPJ nem token.
 Erros vão para o stderr ("Erro: ...") com código 1. Não existe nenhum método de escrita neste script.
 """
 
@@ -177,6 +177,53 @@ def cortar(texto: str, limite: int = MAX_TEXTO) -> str:
     return texto if len(texto) <= limite else texto[:limite].rstrip() + " (…texto cortado)"
 
 
+def _um(ixc: Ixc, tabela: str, id_: str) -> dict | None:
+    try:
+        regs, _ = ixc.listar(tabela, "id", str(id_).strip(), rp=1)
+    except ErroIxc:
+        return None
+    return regs[0] if regs else None
+
+
+def linhas_cliente(r: dict, ixc: Ixc) -> list[str]:
+    """Cliente, contrato e local da O.S. Se o acesso não puder ler a tabela, mostra o id e avisa. Nunca telefone/e-mail/documento."""
+    out = []
+    cid = str(r.get("id_cliente") or "").strip()
+    if cid and cid != "0":
+        c = _um(ixc, "cliente", cid)
+        if c and (c.get("razao") or c.get("fantasia")):
+            nome = str(c.get("razao") or c.get("fantasia")).strip()
+            fan = str(c.get("fantasia") or "").strip()
+            out.append(f"Cliente: {nome}" + (f" ({fan})" if fan and fan.lower() != nome.lower() else "") + f" [id {cid}]")
+        else:
+            out.append(f"Cliente: id {cid} (nome indisponível: este acesso não lê a tabela de clientes)")
+    kid = str(r.get("id_contrato_kit") or r.get("id_contrato") or "").strip()
+    if kid and kid != "0":
+        k = _um(ixc, "cliente_contrato", kid)
+        if k and k.get("contrato"):
+            extra = []
+            if k.get("descricao_aux_plano_venda"):
+                extra.append(str(k["descricao_aux_plano_venda"]).strip())
+            if k.get("status"):
+                extra.append("status do contrato " + str(k["status"]).strip())
+            out.append(f"Contrato: {str(k['contrato']).strip()} [id {kid}]" + (" | " + " | ".join(extra) if extra else ""))
+        else:
+            out.append(f"Contrato: id {kid} (detalhes indisponíveis para este acesso)")
+    partes = [str(r.get(c) or "").strip() for c in ("endereco", "numero", "complemento", "bairro")]
+    partes = [p for p in partes if p and p != "0"]
+    cep = str(r.get("cep") or "").strip()
+    cidade = ""
+    idc = str(r.get("id_cidade") or "").strip()
+    if idc and idc != "0":
+        c = _um(ixc, "cidade", idc)
+        cidade = str(c.get("nome") or "").strip() if c else ""
+        cidade = cidade or f"cidade id {idc}"
+    local = ", ".join(partes + ([cidade] if cidade else [])) + (f" - CEP {cep}" if cep else "")
+    if local.strip(" ,-"):
+        out.append(f"Local da O.S.: {local}")
+    return out
+
+
 def historico(ixc: Ixc, os_id: str, n: int) -> tuple[list[dict], str | None]:
     """Últimas n atualizações da tabela de mensagens. Devolve (lista, aviso). Sem permissão => ([], aviso)."""
     try:
@@ -195,8 +242,7 @@ def texto_os(r: dict, ixc: Ixc, ultimas: int) -> str:
     prio = PRIORIDADE.get(str(r.get("prioridade", "")).strip())
     if prio:
         linhas.append(f"Prioridade: {prio}")
-    if r.get("id_cliente"):
-        linhas.append(f"Cliente (id): {r['id_cliente']}" + (f" | contrato (id): {r['id_contrato_kit']}" if r.get("id_contrato_kit") not in (None, "", "0") else ""))
+    linhas += linhas_cliente(r, ixc)
     linhas += [f"Aberta em: {fmt_dt(r.get('data_abertura'))}",
                f"Assumida em: {fmt_dt(r.get('data_hora_assumido'))}",
                f"Executada em: {fmt_dt(r.get('data_hora_execucao'))}",

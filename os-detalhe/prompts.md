@@ -39,6 +39,9 @@ Teste pelo menos estas, cada uma numa mensagem separada (sem frase fixa):
 5. (Dona Socorro) depois de receber o relatório diário: `me explica melhor a primeira da lista`
 Esperado: o agente roda `date; python3 /opt/data/os_detalhe.py ...`, responde em poucas linhas e não inventa nada. Se a saída tiver "Aviso: histórico completo indisponível", é a permissão do token (ver abaixo); o resto deve funcionar.
 
+## Permissão de leitura de Clientes
+Para mostrar o nome do cliente e os dados do contrato, o token precisa ler as tabelas `cliente` e `cliente_contrato` (o do NOC não lê `cliente`). Se a saída vier com "Cliente: id N (nome indisponível...)", peça ao administrador do IXC a permissão de LEITURA em Clientes para o token. Sem ela, a skill mostra só os ids.
+
 ## Permissão do histórico (pedir ao administrador do IXC)
 O histórico completo de atualizações fica na tabela de mensagens da O.S. (`su_oss_chamado_mensagem`). Hoje o token responde "Você não tem permissão para acessar o recurso". Peça ao administrador para liberar a LEITURA (listar/visualizar) das mensagens/histórico de Ordem de Serviço nos tokens da Milena e da Dona Socorro (sem permissão de inserir, editar ou excluir). Sem isso, a skill funciona só com a descrição e a resposta/fechamento da O.S.
 Observação: não se sabe ainda se esta é a tabela certa nem os nomes dos campos dela; quando a permissão sair, rodar o Passo 4 e conferir se aparecem as "Últimas atualizações". Se não aparecerem, me avise com a saída para eu ajustar os nomes dos campos.
