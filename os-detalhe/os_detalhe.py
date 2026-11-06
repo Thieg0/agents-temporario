@@ -6,7 +6,7 @@ Uso (o agente descobre os parâmetros pela mensagem da pessoa; este script nunca
   python3 os_detalhe.py --os 76580 --ultimas 10    mostra as 10 atualizações mais recentes (padrão 5)
   python3 os_detalhe.py --buscar "SDR BRM 83104884"           procura O.S. pela designação/texto da descrição
   python3 os_detalhe.py --buscar 7386 --por contrato          procura pelo id do contrato (ou --por cliente)
-  python3 os_detalhe.py --desatualizadas --tecnicos 121,161 --dias 3 --so-dias-uteis   O.S. abertas sem atualização há mais de 3 dias
+  python3 os_detalhe.py --desatualizadas --tecnicos 121,161 --dias 2 --so-dias-uteis   O.S. abertas sem atualização há mais de 2 dias
   python3 os_detalhe.py --testar-acesso
 
 O que mostra: status, assunto, responsável, cliente, contrato, local, datas, descrição (campo mensagem) e a resposta/fechamento (mensagem_resposta).
@@ -376,7 +376,7 @@ def principal(argv=None, env=None, agora: datetime | None = None) -> int:
     ap.add_argument("--limite", type=int, default=10, help="máximo de O.S. na busca (padrão 10)")
     ap.add_argument("--desatualizadas", action="store_true", help="O.S. abertas sem atualização há mais de --dias dias (use com --tecnicos)")
     ap.add_argument("--tecnicos", help="ids dos técnicos separados por vírgula, ex.: 121,161")
-    ap.add_argument("--dias", type=int, default=3, help="limite de dias sem atualização (padrão 3)")
+    ap.add_argument("--dias", type=int, default=2, help="limite de dias sem atualização (padrão 2)")
     ap.add_argument("--so-dias-uteis", action="store_true", help="não imprime nada no sábado e no domingo")
     ap.add_argument("--testar-acesso", action="store_true")
     a = ap.parse_args(argv)

@@ -241,3 +241,11 @@ def test_skill_os_desatualizadas():
     assert d["name"] == "os-desatualizadas" and len(d["description"]) <= 1024
     for frase in ("SOMENTE LEITURA", "--desatualizadas --tecnicos 121,161", "<<<PARTE>>>", "NÃO envie mensagem", "NUNCA usar curl"):
         assert frase in t, frase
+
+
+def test_padrao_e_2_dias(capsys, servidor):
+    Fake.extras = [os_t(1, 121, 3), os_t(2, 121, 2), os_t(3, 121, 1)]
+    cod, out, err = rodar_desat(capsys, servidor, "--tecnicos", "121")
+    ids = [l.split(" | ")[0] for l in out.splitlines() if l.startswith("O.S. ") and " | " in l and not l.startswith("O.S. desatualizadas")]
+    assert ids == ["O.S. 1"], ids  # 3 dias entra; exatamente 2 dias e 1 dia não
+    assert "sem atualização há mais de 2 dias" in out

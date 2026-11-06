@@ -40,7 +40,7 @@ Teste pelo menos estas, cada uma numa mensagem separada (sem frase fixa):
 Esperado: o agente roda `date; python3 /opt/data/os_detalhe.py ...`, responde em poucas linhas e não inventa nada. Se a saída tiver "Aviso: histórico completo indisponível", é a permissão do token (ver abaixo); o resto deve funcionar.
 
 ## Milena: relatório da manhã das O.S. desatualizadas (Luiz Felipe e Edson)
-Somente no agente da Milena, depois dos Passos 1 a 4 (o script é o mesmo). Combinado: todo dia útil de manhã, as O.S. abertas do Luiz Felipe (121) e do Edson (161) sem atualização há mais de 3 dias, com a mensagem da O.S. e o histórico. Ajuste `--dias` se ela quiser outro prazo.
+Somente no agente da Milena, depois dos Passos 1 a 4 (o script é o mesmo). Combinado: todo dia útil de manhã, as O.S. abertas do Luiz Felipe (121) e do Edson (161) sem atualização há mais de 2 dias, com a mensagem da O.S. e o histórico. Ajuste `--dias` se ela quiser outro prazo.
 
 ### Passo M1: instalar a skill
 Anexe o `skill-os-desatualizadas.md` e envie:
@@ -55,15 +55,15 @@ Depois envie `/new`.
 ~~~
 Responda sempre em português do Brasil.
 
-Siga a skill os-desatualizadas para os técnicos 121 e 161, com --dias 3, sem --so-dias-uteis. Rode o script com date; na frente e envie o texto exatamente como veio (se vierem partes, uma mensagem por parte). Não grave nada.
+Siga a skill os-desatualizadas para os técnicos 121 e 161, com --dias 2, sem --so-dias-uteis. Rode o script com date; na frente e envie o texto exatamente como veio (se vierem partes, uma mensagem por parte). Não grave nada.
 ~~~
-Esperado: um cabeçalho "O.S. desatualizadas (Luiz Felipe, Edson): N sem atualização há mais de 3 dias" e, para cada O.S., status, responsável, assunto, "Sem atualização há X dias (última: ..., campo ...)", Mensagem e, se o acesso permitir, Histórico. Confira com a Milena se as O.S. listadas fazem sentido (e se o campo usado na data, que aparece no texto, é o certo).
+Esperado: um cabeçalho "O.S. desatualizadas (Luiz Felipe, Edson): N sem atualização há mais de 2 dias" e, para cada O.S., status, responsável, assunto, "Sem atualização há X dias (última: ..., campo ...)", Mensagem e, se o acesso permitir, Histórico. Confira com a Milena se as O.S. listadas fazem sentido (e se o campo usado na data, que aparece no texto, é o certo).
 
 ### Passo M3: agendar (só depois de a Milena aprovar o teste)
 ~~~
 Responda sempre em português do Brasil.
 
-Crie um agendamento: seg a sex às 8h10 (America/Sao_Paulo), siga a skill os-desatualizadas para os técnicos 121 e 161, com --dias 3 e --so-dias-uteis. Se o script não imprimir nada, não envie mensagem. Se imprimir, envie o texto exatamente como veio (uma mensagem por parte). Confirme o agendamento com o horário.
+Crie um agendamento: seg a sex às 8h10 (America/Sao_Paulo), siga a skill os-desatualizadas para os técnicos 121 e 161, com --dias 2 e --so-dias-uteis. Se o script não imprimir nada, não envie mensagem. Se imprimir, envie o texto exatamente como veio (uma mensagem por parte). Confirme o agendamento com o horário.
 ~~~
 
 ## Permissão de leitura de Clientes

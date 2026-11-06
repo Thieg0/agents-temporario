@@ -15,8 +15,8 @@ Arquivo de apoio: /opt/data/os_detalhe.py (o mesmo da skill detalhe-os; instalad
 5. Rode o script de novo a cada pedido (com `date;` na frente); nunca reaproveite uma saída antiga.
 
 ## 2. Rodar
-Técnicos da Milena: Luiz Felipe (121) e Edson (161). Limite padrão: mais de 3 dias sem atualização.
-date; python3 /opt/data/os_detalhe.py --desatualizadas --tecnicos 121,161 --dias 3 --so-dias-uteis
+Técnicos da Milena: Luiz Felipe (121) e Edson (161). Limite padrão: mais de 2 dias sem atualização.
+date; python3 /opt/data/os_detalhe.py --desatualizadas --tecnicos 121,161 --dias 2 --so-dias-uteis
 - Se a pessoa pedir outros técnicos ou outro prazo ("paradas há mais de 5 dias", "do Edson"), troque `--tecnicos` (ids separados por vírgula) e `--dias`. Ids conhecidos: Milena 140, Luiz Felipe 121, Edson 161, Carlos Henrique 118, Raissa 144, Paloma 139. Se o id não for conhecido, pergunte.
 - Para uma consulta fora de agendamento (qualquer dia), tire o `--so-dias-uteis`.
 
