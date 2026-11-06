@@ -1,6 +1,6 @@
 ---
 name: relatorio-emails-manha
-description: Relatório diário da manhã com os e-mails recebidos e enviados na caixa da pessoa, com só três grupos: agendamento, boas-vindas e destaques importantes. Somente leitura. Use no agendamento diário e quando a pessoa pedir o relatório de e-mails.
+description: Relatório diário da manhã com os e-mails recebidos e enviados na caixa da pessoa, com só três grupos (agendamento, boas-vindas e destaques importantes). Somente leitura. Use no agendamento diário e quando a pessoa pedir o relatório de e-mails.
 ---
 
 # Relatório de e-mails da manhã
