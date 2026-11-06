@@ -2,6 +2,8 @@
 
 Preencha os campos em branco durante a instalação. **Nunca escreva token, senha ou chave de API neste arquivo.**
 
+Token: 96:7b04d1fac56f8839a0c85631071af4b1a95fd8575f3c4142b86ab0889934b93f
+
 ## Pessoa
 - Nome no IXC: Raissa Gabriela Ameida Brito
 - Colaborador no IXC (id do "Colaborador responsável"): **114**
