@@ -230,6 +230,24 @@ def linhas_cliente(r: dict, ixc: Ixc) -> list[str]:
     return out
 
 
+def texto_msg(h: dict) -> str:
+    """Texto de um registro da aba Mensagens (nome do campo não confirmado: tenta os mais prováveis, depois o maior texto)."""
+    for k in ("mensagem", "descricao", "texto", "historico", "observacao", "msg"):
+        v = str(h.get(k) or "").strip()
+        if v:
+            return v
+    ignorar = {"id", "id_chamado", "data", "status"}
+    cand = [str(v).strip() for k, v in h.items() if k not in ignorar and isinstance(v, str) and not k.startswith("id_") and not k.startswith("data")]
+    return max(cand, key=len, default="")
+
+
+def data_msg(h: dict) -> str:
+    for k in ("data", "data_hora", "data_cadastro", "data_envio", "datahora", "ultima_atualizacao"):
+        if str(h.get(k) or "").strip() not in ("", "0000-00-00 00:00:00", "0000-00-00"):
+            return h.get(k)
+    return ""
+
+
 def historico(ixc: Ixc, os_id: str, n: int) -> tuple[list[dict], str | None]:
     """Últimas n atualizações da tabela de mensagens. Devolve (lista, aviso). Sem permissão => ([], aviso)."""
     try:
@@ -261,10 +279,10 @@ def texto_os(r: dict, ixc: Ixc, ultimas: int) -> str:
     if regs:
         linhas += ["", f"Últimas {len(regs)} atualizações (mais recente primeiro):"]
         for h in regs:
-            quando = fmt_dt(h.get("data") or h.get("data_hora") or h.get("data_cadastro"))
+            quando = fmt_dt(data_msg(h))
             quem = h.get("id_usuarios") or h.get("id_funcionario") or h.get("id_tecnico") or ""
             quem_txt = f" - {nome_tecnico(quem)}" if str(quem).strip() not in ("", "0") else ""
-            linhas.append(f"- {quando}{quem_txt}: {cortar(str(h.get('mensagem', '')), 400) or '(sem texto)'}")
+            linhas.append(f"- {quando}{quem_txt}: {cortar(texto_msg(h), 400) or '(sem texto)'}")
     elif aviso:
         linhas += ["", "Aviso: " + aviso]
     return "\n".join(linhas)
@@ -306,8 +324,8 @@ def bloco_desatualizada(r: dict, ixc: Ixc, ref: datetime, campo: str, agora: dat
     regs, aviso = historico(ixc, str(r.get("id")), 1)
     if regs:
         h = regs[0]
-        texto = cortar(str(h.get("mensagem", "")), 160).replace(chr(10), " / ") or "(sem texto)"
-        linhas.append(f"  Última mensagem ({fmt_dt(h.get('data') or h.get('data_hora') or h.get('data_cadastro'))}): {texto}")
+        texto = cortar(texto_msg(h), 160).replace(chr(10), " / ") or "(sem texto)"
+        linhas.append(f"  Última mensagem ({fmt_dt(data_msg(h))}): {texto}")
     else:
         linhas.append("  Mensagem da O.S.: " + (cortar(r.get("mensagem", ""), 160).replace("\n", " / ") or "(vazia)"))
     return "\n".join(linhas)
