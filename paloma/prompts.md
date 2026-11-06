@@ -39,7 +39,7 @@ Instale o anexo como skill nova (o nome está dentro do arquivo). NÃO envie nem
 ## Prompt E2: teste (somente leitura)
 Responda sempre em português do Brasil.
 
-Rode `date;` e siga a skill relatorio-emails-manha para o período de ontem às 18h até agora. Mostre o relatório aqui no chat, sem enviar nada por e-mail. Depois me diga quantas threads leu e quantas ignorou.
+Rode `date;` e siga a skill relatorio-emails-manha para as últimas 24 horas. Mostre o relatório aqui no chat, sem enviar nada por e-mail. Depois me diga quantas threads leu e quantas ignorou.
 
 (Conferir com a caixa de entrada: as categorias estão certas? Algo importante ficou em "restantes"? Se sim, avise o Thieg com o exemplo.)
 

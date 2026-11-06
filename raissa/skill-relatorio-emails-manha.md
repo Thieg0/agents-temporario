@@ -16,7 +16,7 @@ Serve para a pessoa dona deste agente (comercial Webfoco) começar o dia sabendo
 6. Rode `date;` antes para saber a data real de hoje.
 
 ## 2. Período
-- Segunda-feira: desde sexta às 18h. Terça a sexta: desde o dia anterior às 18h. Feriado: desde o último dia útil.
+- Sempre as últimas 24 horas contadas a partir de agora (use o `date;`), inclusive às segundas e depois de feriados.
 - Além disso, liste como "pendentes antigos" apenas as threads de agendamento e termo de adesão dos últimos 7 dias em que o último e-mail é do cliente (ou nosso há mais de 48h úteis sem resposta dele).
 
 ## 3. Como classificar (pelo assunto e pelo corpo)
@@ -31,7 +31,7 @@ Na dúvida entre duas categorias, use a primeira da ordem e não explique.
 ## 4. Formato da mensagem (Telegram, texto simples, sem emojis)
 ```
 Relatório de e-mails - <dia da semana> <dd/mm>
-Período: <de> até <agora>
+Período: últimas 24 horas (até <hh:mm>)
 
 AGENDAMENTO (<n>)
 - <cliente/empresa>: <o que pede ou o que falta, 1 linha>. Situação: aguardando nós | aguardando cliente | resolvido.
