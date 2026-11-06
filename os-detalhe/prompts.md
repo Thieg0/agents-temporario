@@ -39,6 +39,33 @@ Teste pelo menos estas, cada uma numa mensagem separada (sem frase fixa):
 5. (Dona Socorro) depois de receber o relatório diário: `me explica melhor a primeira da lista`
 Esperado: o agente roda `date; python3 /opt/data/os_detalhe.py ...`, responde em poucas linhas e não inventa nada. Se a saída tiver "Aviso: histórico completo indisponível", é a permissão do token (ver abaixo); o resto deve funcionar.
 
+## Milena: relatório da manhã das O.S. desatualizadas (Luiz Felipe e Edson)
+Somente no agente da Milena, depois dos Passos 1 a 4 (o script é o mesmo). Combinado: todo dia útil de manhã, as O.S. abertas do Luiz Felipe (121) e do Edson (161) sem atualização há mais de 3 dias, com a mensagem da O.S. e o histórico. Ajuste `--dias` se ela quiser outro prazo.
+
+### Passo M1: instalar a skill
+Anexe o `skill-os-desatualizadas.md` e envie:
+~~~
+Responda sempre em português do Brasil.
+
+Instale o anexo como skill nova (o nome, os-desatualizadas, está dentro do arquivo). Se já existir uma skill com esse nome, mova a antiga para a pasta .archive antes, sem apagar. NÃO execute nada além disso. Responda só com onde a skill ficou e o tamanho do arquivo em bytes.
+~~~
+Depois envie `/new`.
+
+### Passo M2: teste agora (somente leitura)
+~~~
+Responda sempre em português do Brasil.
+
+Siga a skill os-desatualizadas para os técnicos 121 e 161, com --dias 3, sem --so-dias-uteis. Rode o script com date; na frente e envie o texto exatamente como veio (se vierem partes, uma mensagem por parte). Não grave nada.
+~~~
+Esperado: um cabeçalho "O.S. desatualizadas (Luiz Felipe, Edson): N sem atualização há mais de 3 dias" e, para cada O.S., status, responsável, assunto, "Sem atualização há X dias (última: ..., campo ...)", Mensagem e, se o acesso permitir, Histórico. Confira com a Milena se as O.S. listadas fazem sentido (e se o campo usado na data, que aparece no texto, é o certo).
+
+### Passo M3: agendar (só depois de a Milena aprovar o teste)
+~~~
+Responda sempre em português do Brasil.
+
+Crie um agendamento: seg a sex às 8h10 (America/Sao_Paulo), siga a skill os-desatualizadas para os técnicos 121 e 161, com --dias 3 e --so-dias-uteis. Se o script não imprimir nada, não envie mensagem. Se imprimir, envie o texto exatamente como veio (uma mensagem por parte). Confirme o agendamento com o horário.
+~~~
+
 ## Permissão de leitura de Clientes
 Para mostrar o nome do cliente e os dados do contrato, o token precisa ler as tabelas `cliente` e `cliente_contrato` (o do NOC não lê `cliente`). Se a saída vier com "Cliente: id N (nome indisponível...)", peça ao administrador do IXC a permissão de LEITURA em Clientes para o token. Sem ela, a skill mostra só os ids.
 

@@ -6,6 +6,7 @@ Uso (o agente descobre os parâmetros pela mensagem da pessoa; este script nunca
   python3 os_detalhe.py --os 76580 --ultimas 10    mostra as 10 atualizações mais recentes (padrão 5)
   python3 os_detalhe.py --buscar "SDR BRM 83104884"           procura O.S. pela designação/texto da descrição
   python3 os_detalhe.py --buscar 7386 --por contrato          procura pelo id do contrato (ou --por cliente)
+  python3 os_detalhe.py --desatualizadas --tecnicos 121,161 --dias 3 --so-dias-uteis   O.S. abertas sem atualização há mais de 3 dias
   python3 os_detalhe.py --testar-acesso
 
 O que mostra: status, assunto, responsável, cliente, contrato, local, datas, descrição (campo mensagem) e a resposta/fechamento (mensagem_resposta).
@@ -24,7 +25,8 @@ import stat
 import sys
 import urllib.error
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 BASE_URL_PADRAO = "https://gestorixc.webfoco.net/webservice/v1"
 COFRE_PADRAO = "/opt/data/cofre-chaves.json"
@@ -36,6 +38,10 @@ ASSUNTOS = {"5": "Ativação de cliente", "20": "Vistoria Interna", "55": "Geral
 TECNICOS = {140: "Milena", 121: "Luiz Felipe", 161: "Edson", 118: "Carlos Henrique", 144: "Raissa (comercial)", 139: "Paloma", 24: "Socorro", 176: "Bruna",
             179: "Celso", 145: "Daiana", 120: "Eliseu", 184: "Jennypher", 148: "Maria Eduarda", 71: "Fernando", 101: "Marina", 25: "Rafael",
             114: "Raissa (NOC)", 178: "João Vítor", 14: "Julio"}
+FUSO = ZoneInfo("America/Sao_Paulo")
+MAX_PAGINAS = 60
+ASSUNTO_PAUSADO = "278"
+SEPARADOR_PARTE = "<<<PARTE>>>"
 MAX_TEXTO = 700
 TABELA_MENSAGENS = "su_oss_chamado_mensagem"
 
@@ -264,6 +270,95 @@ def texto_os(r: dict, ixc: Ixc, ultimas: int) -> str:
     return "\n".join(linhas)
 
 
+def data_referencia(r: dict) -> tuple[datetime | None, str]:
+    """Última atualização conhecida da O.S. (a mais recente entre os campos de data) e o nome do campo usado."""
+    melhor, campo = None, ""
+    for c in ("ultima_atualizacao", "data_hora_execucao", "data_hora_assumido", "data_hora_analise", "data_reservada", "data_abertura"):
+        d = parse_dt(r.get(c))
+        if d and (melhor is None or d > melhor):
+            melhor, campo = d, c
+    return melhor, campo
+
+
+def os_do_tecnico(ixc: Ixc, tecnico: int) -> list[dict]:
+    regs, totais = [], []
+    for pagina in range(1, MAX_PAGINAS + 1):
+        lote, total = ixc.listar("su_oss_chamado", "id_tecnico", str(tecnico), page=pagina, id_desc=True)
+        regs += lote
+        if total is not None:
+            totais.append(total)
+        if len(lote) < 30 or (totais and len(regs) >= max(totais)):
+            break
+    else:
+        raise ErroIxc(f"técnico {tecnico}: mais de {MAX_PAGINAS * 30} O.S., recusei para não calcular com dados incompletos")
+    if totais and len(regs) != max(totais):
+        raise ErroIxc(f"técnico {tecnico}: recebi {len(regs)} O.S., mas o IXC diz que são {max(totais)}; tente de novo")
+    errados = [r.get("id") for r in regs if str(r.get("id_tecnico", "")).strip() != str(tecnico)]
+    if errados:
+        raise ErroIxc(f"técnico {tecnico}: o IXC devolveu O.S. de outro técnico ({errados[:3]})")
+    return regs
+
+
+def bloco_desatualizada(r: dict, ixc: Ixc, ref: datetime, campo: str, agora: datetime, hist_n: int) -> str:
+    dias = (agora - ref).days
+    linhas = [f"O.S. {r.get('id')} | {nome_status(r.get('status'))} | {nome_tecnico(r.get('id_tecnico'))} | {nome_assunto(ixc, r.get('id_assunto'))}",
+              f"Sem atualização há {dias} dias (última: {ref.strftime('%d/%m/%Y %H:%M')}, campo {campo}) | aberta em {fmt_dt(r.get('data_abertura'))}",
+              "Mensagem: " + (cortar(r.get("mensagem", ""), 350).replace("\n", " / ") or "(vazia)")]
+    resp = cortar(r.get("mensagem_resposta", ""), 250).replace("\n", " / ")
+    if resp:
+        linhas.append("Resposta: " + resp)
+    regs, aviso = historico(ixc, str(r.get("id")), hist_n)
+    if regs:
+        linhas.append(f"Histórico (últimas {len(regs)}):")
+        for h in regs:
+            quem = h.get("id_usuarios") or h.get("id_funcionario") or h.get("id_tecnico") or ""
+            quem_txt = f" - {nome_tecnico(quem)}" if str(quem).strip() not in ("", "0") else ""
+            linhas.append(f"  - {fmt_dt(h.get('data') or h.get('data_hora') or h.get('data_cadastro'))}{quem_txt}: {cortar(str(h.get('mensagem', '')), 200).replace(chr(10), ' / ') or '(sem texto)'}")
+    elif aviso:
+        linhas.append("Histórico: indisponível para este acesso (mostrando só os campos da O.S.)")
+    return "\n".join(linhas)
+
+
+def relatorio_desatualizadas(ixc: Ixc, tecnicos: list[int], dias: int, agora: datetime, hist_n: int = 3) -> str:
+    """Texto com as O.S. abertas (status diferente de F e C, fora as pausadas) sem atualização há mais de `dias` dias. Vazio se não houver."""
+    blocos, pausadas, total_abertas = [], 0, 0
+    for t in tecnicos:
+        itens = []
+        for r in os_do_tecnico(ixc, t):
+            if str(r.get("status", "")).strip() in ("F", "C"):
+                continue
+            total_abertas += 1
+            if str(r.get("id_assunto", "")).strip() == ASSUNTO_PAUSADO:
+                pausadas += 1
+                continue
+            ref, campo = data_referencia(r)
+            if ref is None or (agora - ref) <= timedelta(days=dias):
+                continue
+            itens.append((ref, r, campo))
+        itens.sort(key=lambda x: x[0])  # mais antiga primeiro
+        for ref, r, campo in itens:
+            blocos.append(bloco_desatualizada(r, ixc, ref, campo, agora, hist_n))
+    if not blocos:
+        return ""
+    nomes = ", ".join(nome_tecnico(str(t)) for t in tecnicos)
+    topo = f"O.S. desatualizadas ({nomes}): {len(blocos)} sem atualização há mais de {dias} dias. Abertas no total: {total_abertas}" + (f" | pausadas ignoradas: {pausadas}" if pausadas else "")
+    return topo + "\n\n" + "\n\n".join(blocos)
+
+
+def dividir(texto: str, limite: int = LIMITE_TELEGRAM) -> list[str]:
+    partes, atual = [], ""
+    for bloco in texto.split("\n\n"):
+        candidato = atual + "\n\n" + bloco if atual else bloco
+        if len(candidato) > limite and atual:
+            partes.append(atual)
+            atual = bloco[:limite]
+        else:
+            atual = candidato
+    if atual:
+        partes.append(atual)
+    return partes
+
+
 def linha_busca(r: dict) -> str:
     primeira = cortar(r.get("mensagem", ""), 90).split("\n")[0]
     return f"- O.S. {r.get('id')} | {nome_status(r.get('status'))} | aberta {fmt_dt(r.get('data_abertura'))} | {primeira}"
@@ -272,13 +367,17 @@ def linha_busca(r: dict) -> str:
 POR = {"designacao": ("mensagem", "L"), "texto": ("mensagem", "L"), "cliente": ("id_cliente", "="), "contrato": ("id_contrato_kit", "=")}
 
 
-def principal(argv=None, env=None) -> int:
+def principal(argv=None, env=None, agora: datetime | None = None) -> int:
     ap = argparse.ArgumentParser(description="Detalhes e atualizações de uma O.S. do IXC (somente leitura)")
     ap.add_argument("--os", help="número da O.S.")
     ap.add_argument("--buscar", help="texto/designação ou id para procurar O.S.")
     ap.add_argument("--por", choices=sorted(POR), default="designacao", help="onde procurar com --buscar (padrão: designacao)")
     ap.add_argument("--ultimas", type=int, default=5, help="quantas atualizações mostrar (padrão 5, máximo 30)")
     ap.add_argument("--limite", type=int, default=10, help="máximo de O.S. na busca (padrão 10)")
+    ap.add_argument("--desatualizadas", action="store_true", help="O.S. abertas sem atualização há mais de --dias dias (use com --tecnicos)")
+    ap.add_argument("--tecnicos", help="ids dos técnicos separados por vírgula, ex.: 121,161")
+    ap.add_argument("--dias", type=int, default=3, help="limite de dias sem atualização (padrão 3)")
+    ap.add_argument("--so-dias-uteis", action="store_true", help="não imprime nada no sábado e no domingo")
     ap.add_argument("--testar-acesso", action="store_true")
     a = ap.parse_args(argv)
     a.ultimas = max(1, min(a.ultimas, 30))
@@ -288,6 +387,20 @@ def principal(argv=None, env=None) -> int:
         if a.testar_acesso:
             ixc.listar("su_oss_chamado", "id", "1", rp=1)
             print(f"acesso OK (origem do acesso: {origem})")
+            return 0
+        if a.desatualizadas:
+            agora = agora or datetime.now(FUSO).replace(tzinfo=None)
+            if a.so_dias_uteis and agora.weekday() >= 5:
+                return 0
+            try:
+                ids = [int(x) for x in (a.tecnicos or "").replace(" ", "").split(",") if x]
+            except ValueError:
+                raise ErroIxc("--tecnicos deve ter só números separados por vírgula") from None
+            if not ids:
+                raise ErroIxc("informe --tecnicos, ex.: --tecnicos 121,161")
+            texto = relatorio_desatualizadas(ixc, ids, max(0, a.dias), agora)
+            if texto:
+                print(f"\n{SEPARADOR_PARTE}\n".join(dividir(texto)))
             return 0
         if a.os:
             if not str(a.os).strip().isdigit():

@@ -2,6 +2,7 @@ import json
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -29,6 +30,7 @@ HIST = [{"id": str(i), "id_chamado": "76580", "mensagem": f"atualização {i}", 
 class Fake(BaseHTTPRequestHandler):
     permitir_historico = True
     permitir_cliente = True
+    extras = []
     chamadas = []
 
     def log_message(self, *a):
@@ -40,7 +42,7 @@ class Fake(BaseHTTPRequestHandler):
         tabela = self.path.strip("/").split("/")[-1]
         qt, valor, oper = corpo["qtype"].split(".")[-1], corpo["query"], corpo["oper"]
         if tabela == "su_oss_chamado":
-            regs = [r for r in OSS if (valor.lower() in r.get(qt, "").lower() if oper == "L" else r.get(qt) == valor)]
+            regs = [r for r in OSS + Fake.extras if (valor.lower() in r.get(qt, "").lower() if oper == "L" else r.get(qt) == valor)]
             regs.sort(key=lambda r: int(r["id"]), reverse=corpo.get("sortorder") == "desc")
         elif tabela == "su_oss_chamado_mensagem":
             if not Fake.permitir_historico:
@@ -58,8 +60,8 @@ class Fake(BaseHTTPRequestHandler):
             regs = [{"id": "135", "assunto": "Reparo Incidentes"}] if valor == "135" else []
         else:
             return self._json({"type": "error", "message": "Recurso não está disponível!"})
-        n = int(corpo["rp"])
-        self._json({"page": "1", "total": str(len(regs)), "registros": regs[:n]})
+        n, pg = int(corpo["rp"]), int(corpo.get("page", "1"))
+        self._json({"page": str(pg), "total": str(len(regs)), "registros": regs[(pg - 1) * n:pg * n]})
 
     def _json(self, d):
         b = json.dumps(d).encode()
@@ -73,6 +75,7 @@ class Fake(BaseHTTPRequestHandler):
 def servidor():
     Fake.permitir_historico = True
     Fake.permitir_cliente = True
+    Fake.extras = []
     Fake.chamadas = []
     s = HTTPServer(("127.0.0.1", 0), Fake)
     threading.Thread(target=s.serve_forever, daemon=True).start()
@@ -163,3 +166,78 @@ def test_skill_detalhe_os_sem_frase_fixa_e_somente_leitura():
     assert "SOMENTE LEITURA" in s and "NUNCA usar curl" in s and "Nunca invente" in s
     for flag in ("--os", "--buscar", "--por", "--ultimas"):
         assert flag in s
+
+
+AGORA = datetime(2026, 11, 9, 8, 0, 0)  # segunda-feira
+
+
+def os_t(i, tecnico, dias, status="EN", assunto="55", campo="ultima_atualizacao"):
+    d = (AGORA.replace(hour=8) - __import__("datetime").timedelta(days=dias)).strftime("%Y-%m-%d %H:%M:%S")
+    return {"id": str(i), "id_tecnico": str(tecnico), "status": status, "id_assunto": assunto, "id_cliente": "150", "id_contrato_kit": "7386",
+            "data_abertura": "2026-10-01 08:00:00", campo: d, "mensagem": f"mensagem da {i}\nsegunda linha", "mensagem_resposta": ""}
+
+
+def rodar_desat(capsys, env, *args, agora=AGORA):
+    cod = m.principal(["--desatualizadas", *args], env=env, agora=agora)
+    cap = capsys.readouterr()
+    return cod, cap.out, cap.err
+
+
+def test_desatualizadas_regras(capsys, servidor):
+    Fake.extras = [os_t(1, 121, 10), os_t(2, 121, 4), os_t(3, 121, 3), os_t(4, 121, 20, status="F"), os_t(5, 121, 20, assunto="278"),
+                   os_t(6, 161, 30), os_t(7, 161, 1), os_t(8, 140, 50), os_t(9, 161, 8, status="C")]
+    cod, out, err = rodar_desat(capsys, servidor, "--tecnicos", "121,161", "--dias", "3")
+    assert cod == 0 and err == ""
+    ids = [l.split(" | ")[0] for l in out.splitlines() if l.startswith("O.S. ") and " | " in l and not l.startswith("O.S. desatualizadas")]
+    # 121: 1 (10 dias) e 2 (4 dias); 161: 6 (30 dias). Exatamente 3 dias (O.S. 3) e recentes não entram; F, C, pausada e outro técnico ficam fora
+    assert ids == ["O.S. 1", "O.S. 2", "O.S. 6"], ids
+    assert out.splitlines()[0].startswith("O.S. desatualizadas (Luiz Felipe, Edson): 3 sem atualização")
+    assert "pausadas ignoradas: 1" in out and "Sem atualização há 10 dias" in out and "mensagem da 1 / segunda linha" in out
+
+
+def test_desatualizadas_mostra_historico_ou_avisa(capsys, servidor):
+    Fake.extras = [dict(os_t(1, 121, 10), id="76580")]
+    cod, out, _ = rodar_desat(capsys, servidor, "--tecnicos", "121")
+    assert cod == 0 and "Histórico (últimas 3):" in out and "atualização 7" in out and "atualização 4" not in out
+    Fake.permitir_historico = False
+    cod, out, _ = rodar_desat(capsys, servidor, "--tecnicos", "121")
+    assert "Histórico: indisponível" in out and "Mensagem: mensagem da 1 / segunda linha" in out
+
+
+def test_desatualizadas_silencio_fim_de_semana_e_sem_pendencia(capsys, servidor):
+    Fake.extras = [os_t(1, 121, 10)]
+    sabado = datetime(2026, 11, 7, 8, 0, 0)
+    cod, out, _ = rodar_desat(capsys, servidor, "--tecnicos", "121", "--so-dias-uteis", agora=sabado)
+    assert cod == 0 and out == ""
+    Fake.extras = [os_t(1, 121, 1)]
+    cod, out, _ = rodar_desat(capsys, servidor, "--tecnicos", "121")
+    assert cod == 0 and out == ""
+
+
+def test_desatualizadas_paginacao_e_partes(capsys, servidor):
+    Fake.extras = [os_t(1000 + i, 121, 10 + i) for i in range(65)]
+    cod, out, err = rodar_desat(capsys, servidor, "--tecnicos", "121")
+    assert cod == 0 and err == ""
+    blocos = [l for l in out.splitlines() if l.startswith("O.S. ") and " | " in l and not l.startswith("O.S. desatualizadas")]
+    assert len(blocos) == 65
+    partes = out.split("<<<PARTE>>>")
+    assert len(partes) > 1 and all(len(x) <= m.LIMITE_TELEGRAM + 5 for x in partes)
+    # mais antiga primeiro: a de 74 dias (id 1064) vem antes da de 10 dias (id 1000)
+    assert out.index("O.S. 1064") < out.index("O.S. 1000")
+
+
+def test_desatualizadas_exige_tecnicos_e_so_leitura(capsys, servidor):
+    cod, out, err = rodar_desat(capsys, servidor)
+    assert cod == 1 and "informe --tecnicos" in err
+    cod, out, err = rodar_desat(capsys, servidor, "--tecnicos", "12a")
+    assert cod == 1 and "só números" in err
+    assert all(c[0] == "POST" and c[2] == "listar" for c in Fake.chamadas)
+
+
+def test_skill_os_desatualizadas():
+    import yaml
+    t = (Path(m.__file__).parent / "skill-os-desatualizadas.md").read_text(encoding="utf-8")
+    d = yaml.safe_load(t.split("---")[1])
+    assert d["name"] == "os-desatualizadas" and len(d["description"]) <= 1024
+    for frase in ("SOMENTE LEITURA", "--desatualizadas --tecnicos 121,161", "<<<PARTE>>>", "NÃO envie mensagem", "NUNCA usar curl"):
+        assert frase in t, frase
